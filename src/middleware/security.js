@@ -2,7 +2,6 @@
 
 const helmet = require('helmet');
 const hpp = require('hpp');
-const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const { config } = require('../config');
 const { fail } = require('../utils/response');
@@ -62,28 +61,62 @@ function securityHeaders() {
   });
 }
 
+function normalizeOrigin(o) {
+  if (!o) return '';
+  return String(o).trim().replace(/\/+$/, '');
+}
+
+function originFromRequest(req) {
+  const proto = req.protocol || 'http';
+  const host = req.get('host');
+  if (!host) return null;
+  return `${proto}://${host}`;
+}
+
+function isOriginAllowed(origin, req, allowList, sameOrigin) {
+  // Non-browser (no Origin header) → always allow
+  if (!origin) return true;
+  const norm = normalizeOrigin(origin);
+  if (sameOrigin && norm === sameOrigin) return true;
+  if (allowList.includes('*')) return true;
+  if (allowList.includes(norm)) return true;
+  // Same-origin: compare against the request's own host
+  const reqOrigin = originFromRequest(req);
+  if (reqOrigin && normalizeOrigin(reqOrigin) === norm) return true;
+  return false;
+}
+
 function corsMiddleware() {
-  const allow = config.cors.origins;
-  if (!allow.length) {
-    return (req, res, next) => {
-      const origin = req.get('origin');
-      if (origin) {
-        res.setHeader('Access-Control-Allow-Origin', 'null');
+  const allowList = config.cors.origins.map(normalizeOrigin).filter(Boolean);
+  const sameOrigin = config.publicUrl ? normalizeOrigin(config.publicUrl) : null;
+  const allowMethods = 'GET,POST,DELETE,OPTIONS';
+  const allowHeaders = 'Content-Type,X-API-Key,X-Request-Id';
+
+  return (req, res, next) => {
+    const origin = req.get('origin');
+
+    // Always set Vary so caches don't mix responses by Origin
+    res.setHeader('Vary', 'Origin');
+
+    // Preflight
+    if (req.method === 'OPTIONS') {
+      if (!isOriginAllowed(origin, req, allowList, sameOrigin)) {
+        return fail(res, 403, 'CORS_DENIED', 'CORS: origin not allowed');
       }
-      next();
-    };
-  }
-  return cors({
-    origin: (origin, cb) => {
-      if (!origin) return cb(null, true);
-      if (allow.includes(origin) || allow.includes('*')) return cb(null, true);
-      return cb(new Error('CORS: origin not allowed'));
-    },
-    methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'X-API-Key', 'X-Request-Id'],
-    credentials: false,
-    maxAge: 600,
-  });
+      if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Methods', allowMethods);
+      res.setHeader('Access-Control-Allow-Headers', allowHeaders);
+      res.setHeader('Access-Control-Max-Age', '600');
+      return res.status(204).end();
+    }
+
+    // Actual request
+    if (origin && !isOriginAllowed(origin, req, allowList, sameOrigin)) {
+      return fail(res, 403, 'CORS_DENIED', 'CORS: origin not allowed');
+    }
+    if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
+    return next();
+  };
 }
 
 function noParamPollution() {
