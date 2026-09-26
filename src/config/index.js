@@ -33,6 +33,7 @@ const config = {
   dataDir: optional('DATA_DIR', './data'),
   trustProxy: asInt('TRUST_PROXY', 1),
   logLevel: optional('LOG_LEVEL', env === 'production' ? 'info' : 'debug'),
+  publicUrl: optional('PUBLIC_URL', ''),
 
   dashboard: {
     email: optional('DASHBOARD_EMAIL', 'lpzcode@yahoo.com'),

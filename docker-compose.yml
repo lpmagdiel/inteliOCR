@@ -12,6 +12,7 @@ services:
       DATA_DIR: /data
       TRUST_PROXY: "1"
       LOG_LEVEL: info
+      PUBLIC_URL: ${PUBLIC_URL:-https://inteliapi-inteliocr-api-f1bso8-15ce77-186-240-153-209.sslip.io}
       DASHBOARD_EMAIL: ${DASHBOARD_EMAIL}
       DASHBOARD_PASSWORD_HASH: ${DASHBOARD_PASSWORD_HASH}
       JWT_SECRET: ${JWT_SECRET}
@@ -27,7 +28,7 @@ services:
       RATE_LIMIT_KEY_PER_MIN: "120"
       IMG_MAX_DIMENSION: "1600"
       IMG_QUALITY: "82"
-      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://inteliapi-inteliocr-api-f1bso8-15ce77-186-240-153-209.sslip.io}
       HASH_PEPPER: ${HASH_PEPPER}
     volumes:
       - inteliocr-data:/data

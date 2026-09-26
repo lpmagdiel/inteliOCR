@@ -91,6 +91,7 @@ All variables live in `.env` (see `.env.example` for the full list). The most im
 | `DATA_DIR` | no | `./data` | Where SQLite lives (mount a volume here) |
 | `TRUST_PROXY` | no | `1` | Trust X-Forwarded-* (set to `1` behind Traefik/Caddy) |
 | `LOG_LEVEL` | no | `info` | pino log level |
+| `PUBLIC_URL` | no | _(empty)_ | Public URL of this instance. Surfaced in `GET /` and useful for logs/links. |
 | `DASHBOARD_EMAIL` | no | `lpzcode@yahoo.com` | Login email for the dashboard |
 | `DASHBOARD_PASSWORD_HASH` | **yes (prod)** | — | bcrypt hash of the dashboard password |
 | `JWT_SECRET` | **yes (prod)** | — | Min. 32 random chars. Used to sign session cookies. |

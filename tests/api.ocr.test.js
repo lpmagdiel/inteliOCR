@@ -35,6 +35,17 @@ describe('GET /v1/health', () => {
   });
 });
 
+describe('GET /', () => {
+  test('exposes service info', async () => {
+    const res = await request(app).get('/').set('User-Agent', 'jest');
+    expect(res.status).toBe(200);
+    expect(res.body.data.service).toBe('inteliocr');
+    expect(res.body.data.endpoints.health).toBe('GET /v1/health');
+    expect(res.body.data.endpoints.ocr).toBe('POST /v1/ocr');
+    expect(res.body.data.endpoints.dashboard).toBe('GET /dashboard');
+  });
+});
+
 describe('POST /v1/ocr', () => {
   test('rejects missing file', async () => {
     const res = await request(app)

@@ -57,6 +57,7 @@ function buildApp() {
       data: {
         service: 'inteliocr',
         version: '1.0.0',
+        public_url: config.publicUrl || null,
         endpoints: {
           health: 'GET /v1/health',
           ocr: 'POST /v1/ocr',
