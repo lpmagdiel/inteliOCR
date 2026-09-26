@@ -1,0 +1,63 @@
+<% layout = 'layout' -%>
+<h1>API Keys</h1>
+
+<% if (typeof newKey !== 'undefined' && newKey) { %>
+  <div class="alert success">
+    New API key created. <strong>Copy it now — it won't be shown again.</strong>
+    <pre class="key"><%= newKey %></pre>
+  </div>
+<% } %>
+<% if (typeof flash !== 'undefined' && flash) { %>
+  <div class="alert success"><%= flash %></div>
+<% } %>
+
+<div class="card">
+  <h2>Create new key</h2>
+  <form method="POST" action="/dashboard/keys">
+    <label>Name
+      <input type="text" name="name" required maxlength="64" />
+    </label>
+    <label>Monthly quota
+      <input type="number" name="monthly_quota" value="1000" min="1" max="1000000" required />
+    </label>
+    <button type="submit">Create</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Existing keys</h2>
+  <table class="table">
+    <thead>
+      <tr><th>ID</th><th>Name</th><th>Prefix</th><th>Quota</th><th>Status</th><th>Created</th><th>Last used</th><th></th></tr>
+    </thead>
+    <tbody>
+      <% keys.forEach(function(k){ %>
+        <tr>
+          <td><%= k.id %></td>
+          <td><%= k.name %></td>
+          <td><code><%= k.key_prefix %></code></td>
+          <td><%= k.monthly_quota %></td>
+          <td>
+            <% if (k.is_active) { %>
+              <span class="badge ok">active</span>
+            <% } else { %>
+              <span class="badge off">revoked</span>
+            <% } %>
+          </td>
+          <td><%= k.created_at %></td>
+          <td><%= k.last_used_at || '—' %></td>
+          <td>
+            <% if (k.is_active) { %>
+              <form method="POST" action="/dashboard/keys/<%= k.id %>/revoke" onsubmit="return confirm('Revoke this key?')">
+                <button type="submit" class="danger">Revoke</button>
+              </form>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+      <% if (!keys.length) { %>
+        <tr><td colspan="8" class="muted">No keys yet.</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>

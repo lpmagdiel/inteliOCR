@@ -1,0 +1,26 @@
+<% layout = 'layout' -%>
+<h1>Usage log</h1>
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr><th>When</th><th>Endpoint</th><th>Status</th><th>Latency</th><th>In</th><th>Out</th><th>Key</th><th>Error</th></tr>
+    </thead>
+    <tbody>
+      <% logs.forEach(function(l){ %>
+        <tr>
+          <td><%= l.ts %></td>
+          <td><code><%= l.endpoint %></code></td>
+          <td><%= l.status %></td>
+          <td><%= l.latency_ms %> ms</td>
+          <td><%= l.in_bytes ? (l.in_bytes/1024).toFixed(1)+' KB' : '—' %></td>
+          <td><%= l.out_bytes ? (l.out_bytes/1024).toFixed(1)+' KB' : '—' %></td>
+          <td><%= l.key_name ? l.key_name + ' ('+l.key_prefix+')' : '—' %></td>
+          <td><%= l.error_code || '' %></td>
+        </tr>
+      <% }) %>
+      <% if (!logs.length) { %>
+        <tr><td colspan="8" class="muted">No requests logged yet.</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>

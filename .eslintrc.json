@@ -1,0 +1,32 @@
+{
+  "env": {
+    "node": true,
+    "es2022": true,
+    "jest": true,
+    "browser": true
+  },
+  "extends": "eslint:recommended",
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "script"
+  },
+  "ignorePatterns": ["node_modules/", "src/public/js/chart.umd.min.js", "coverage/"],
+  "rules": {
+    "no-console": "off",
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    "prefer-const": "error",
+    "eqeqeq": ["error", "smart"],
+    "no-var": "error"
+  },
+  "overrides": [
+    {
+      "files": ["src/public/js/dashboard.js"],
+      "env": { "browser": true, "node": false },
+      "globals": { "Chart": "readonly" },
+      "rules": {
+        "no-var": "off",
+        "no-undef": "off"
+      }
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/public/css/app.css" />
+  <% if (typeof extraHead !== 'undefined') { %><%- extraHead %><% } %>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><a href="/dashboard">inteliOCR</a></div>
+    <% if (typeof showNav === 'undefined' || showNav) { %>
+      <nav>
+        <a href="/dashboard">Overview</a>
+        <a href="/dashboard/keys">API Keys</a>
+        <a href="/dashboard/usage">Usage</a>
+        <form method="POST" action="/dashboard/logout" style="display:inline">
+          <button type="submit" class="link">Logout</button>
+        </form>
+      </nav>
+    <% } %>
+  </header>
+  <main class="container">
+    <%- body %>
+  </main>
+  <footer class="footer">inteliOCR • OCR for receipts & invoices • No content is stored.</footer>
+</body>
+</html>

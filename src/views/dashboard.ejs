@@ -1,0 +1,61 @@
+<% layout = 'layout' -%>
+<h1>Overview</h1>
+
+<div class="cards">
+  <div class="card stat">
+    <div class="label">Requests (30d)</div>
+    <div class="value"><%= summary.total || 0 %></div>
+  </div>
+  <div class="card stat">
+    <div class="label">Success rate</div>
+    <div class="value"><%= successRate %>%</div>
+  </div>
+  <div class="card stat">
+    <div class="label">Avg latency</div>
+    <div class="value"><%= summary.avg_latency || 0 %> ms</div>
+  </div>
+  <div class="card stat">
+    <div class="label">Avg input</div>
+    <div class="value"><%= avgInKb %> KB</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Requests per day (last 30 days)</h2>
+  <canvas id="chartRequests" height="120"></canvas>
+</div>
+
+<div class="card">
+  <h2>Status distribution</h2>
+  <canvas id="chartStatus" height="80"></canvas>
+</div>
+
+<div class="card">
+  <h2>Usage by API key (last 30 days)</h2>
+  <table class="table">
+    <thead>
+      <tr><th>Name</th><th>Prefix</th><th>Requests</th><th>OK</th><th>Avg latency</th><th>Quota</th></tr>
+    </thead>
+    <tbody>
+      <% perKey.forEach(function(k){ %>
+        <tr>
+          <td><%= k.name %></td>
+          <td><code><%= k.key_prefix %></code></td>
+          <td><%= k.requests %></td>
+          <td><%= k.ok %></td>
+          <td><%= k.avg_latency || '—' %> ms</td>
+          <td><%= k.monthly_quota %>/mo</td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%- '<script src="/public/js/chart.umd.min.js"></script>' %>
+<%- '<script src="/public/js/dashboard.js"></script>' %>
+<script>
+  window.__chartData = {
+    perDay: <%- JSON.stringify(perDay) %>,
+    status: <%- JSON.stringify(statusDist) %>
+  };
+</script>

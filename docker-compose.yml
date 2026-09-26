@@ -1,0 +1,41 @@
+services:
+  inteliocr:
+    build: .
+    image: inteliocr:latest
+    container_name: inteliocr
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATA_DIR: /data
+      TRUST_PROXY: "1"
+      LOG_LEVEL: info
+      DASHBOARD_EMAIL: ${DASHBOARD_EMAIL}
+      DASHBOARD_PASSWORD_HASH: ${DASHBOARD_PASSWORD_HASH}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: 12h
+      MINIMAX_API_KEY: ${MINIMAX_API_KEY}
+      MINIMAX_API_BASE: ${MINIMAX_API_BASE:-https://api.minimaxi.chat/v1}
+      MINIMAX_MODEL: ${MINIMAX_MODEL:-MiniMax-VL}
+      MINIMAX_TIMEOUT_MS: "30000"
+      MAX_UPLOAD_IMAGE_MB: "10"
+      MAX_UPLOAD_PDF_MB: "15"
+      RATE_LIMIT_WINDOW_MS: "60000"
+      RATE_LIMIT_IP_PER_MIN: "30"
+      RATE_LIMIT_KEY_PER_MIN: "120"
+      IMG_MAX_DIMENSION: "1600"
+      IMG_QUALITY: "82"
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      HASH_PEPPER: ${HASH_PEPPER}
+    volumes:
+      - inteliocr-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  inteliocr-data:
