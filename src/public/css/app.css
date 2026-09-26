@@ -32,7 +32,8 @@
 
 * { box-sizing: border-box; }
 
-html, body { height: 100%; }
+html, body { min-height: 100%; }
+body { overflow-x: hidden; }
 
 body {
   margin: 0;
@@ -321,7 +322,6 @@ button.small { padding: 6px 12px; font-size: 12px; }
   text-transform: uppercase;
   letter-spacing: .06em;
   background: var(--panel);
-  position: sticky; top: 0;
 }
 .table tbody tr { transition: background .1s var(--t); }
 .table tbody tr:hover { background: var(--panel-2); }
@@ -422,7 +422,15 @@ pre.key {
 }
 @media (max-width: 900px) { .chart-grid { grid-template-columns: 1fr; } }
 
-canvas { max-width: 100%; }
+.chart-box {
+  position: relative;
+  height: 280px;
+  width: 100%;
+}
+.chart-box.tall { height: 320px; }
+@media (max-width: 900px) { .chart-box { height: 240px; } }
+
+canvas { max-width: 100%; display: block; }
 
 /* ------------------------------------------------------------------ */
 /*  Login                                                              */
