@@ -49,7 +49,29 @@ INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./receipt.jpg
 INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./invoice.pdf --type=invoice
 ```
 
-Prints merchant, totals, items, latency. Exits non-zero on error.
+The CLI targets `http://localhost:3000` by default, or reads `INTELIOCR_API_URL`. Override it with `--endpoint=https://your-host.example.com`. It prints merchant, totals, items, and latency, and exits non-zero on error. Run `node examples/node-cli.js --help` to see the usage.
+
+### Quick local API test
+
+1. Start the API with `npm run dev` (configure the required server values in `.env`).
+2. Check that the server is responding:
+
+  ```bash
+  curl http://localhost:3000/v1/health
+  ```
+
+3. Create an API key in the dashboard, then send a supported image or PDF:
+
+  ```bash
+  INTELIOCR_API_KEY=ioc_<prefix>_<secret> node examples/node-cli.js ./receipt.jpg --type=receipt
+  ```
+
+For a deployed API, set `INTELIOCR_API_URL` or pass `--endpoint`:
+
+```bash
+INTELIOCR_API_KEY=ioc_<prefix>_<secret> \
+  node examples/node-cli.js ./invoice.pdf --type=invoice --endpoint=https://your-host.example.com
+```
 
 ## 3. Browser demo — `browser.html`
 

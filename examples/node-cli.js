@@ -15,18 +15,24 @@ const path = require('node:path');
 const { InteliOCR } = require('./javascript-usage');
 
 function parseArgs(argv) {
-  const out = { type: 'receipt' };
+  const out = { type: 'receipt', endpoint: process.env.INTELIOCR_API_URL || 'http://localhost:3000' };
   for (const a of argv.slice(2)) {
     if (a.startsWith('--type=')) out.type = a.slice('--type='.length);
+    else if (a.startsWith('--endpoint=')) out.endpoint = a.slice('--endpoint='.length);
+    else if (a === '--help' || a === '-h') out.help = true;
     else if (!out.file) out.file = a;
   }
   return out;
 }
 
 (async () => {
-  const { file, type } = parseArgs(process.argv);
+  const { file, type, endpoint, help } = parseArgs(process.argv);
+  if (help) {
+    console.log('Usage: INTELIOCR_API_KEY=<key> node examples/node-cli.js <file> [--type=receipt|invoice] [--endpoint=http://localhost:3000]');
+    process.exit(0);
+  }
   if (!file) {
-    console.error('Usage: node examples/node-cli.js <path-to-image-or-pdf> [--type=receipt|invoice]');
+    console.error('Usage: INTELIOCR_API_KEY=<key> node examples/node-cli.js <file> [--type=receipt|invoice] [--endpoint=http://localhost:3000]');
     process.exit(2);
   }
   const apiKey = process.env.INTELIOCR_API_KEY;
@@ -35,8 +41,14 @@ function parseArgs(argv) {
     process.exit(2);
   }
 
-  const buf = await fs.readFile(path.resolve(file));
-  const client = new InteliOCR({ apiKey });
+  let buf;
+  try {
+    buf = await fs.readFile(path.resolve(file));
+  } catch (e) {
+    console.error(`Could not read file "${file}": ${e.message}`);
+    process.exit(2);
+  }
+  const client = new InteliOCR({ apiKey, endpoint });
 
   const t0 = Date.now();
   try {

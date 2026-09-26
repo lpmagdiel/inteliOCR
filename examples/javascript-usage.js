@@ -126,5 +126,3 @@ if (typeof module !== 'undefined' && module.exports) {
 if (typeof window !== 'undefined') {
   window.InteliOCR = InteliOCR;
 }
-
-module.exports.InteliOCR = InteliOCR;
