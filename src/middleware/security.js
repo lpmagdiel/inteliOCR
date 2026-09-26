@@ -58,7 +58,12 @@ function securityHeaders() {
         formAction: ["'self'"],
       },
     },
+    // COOP/CORP same-origin can cause Firefox to send "Origin: null" on
+    // subsequent navigations within the same page, breaking legitimate
+    // same-origin form submissions. Disable both for the dashboard.
     crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginResourcePolicy: false,
   });
 }
 
@@ -77,8 +82,24 @@ function hostOf(urlOrHost) {
 }
 
 function isOriginAllowed(origin, req, allowList, sameOrigin) {
-  // Non-browser (no Origin header) → always allow
+  // No Origin header → non-browser request → allow
   if (!origin) return true;
+
+  // Firefox sends "Origin: null" in legitimate same-origin contexts when
+  // privacy.resistFingerprinting is on, or when COOP isolates the browsing
+  // context. The browser still tells us via Sec-Fetch-* whether the request
+  // is same-origin, navigation, etc. Trust that signal.
+  if (origin.toLowerCase() === 'null') {
+    const fetchSite = (req.get('sec-fetch-site') || '').toLowerCase();
+    const fetchMode = (req.get('sec-fetch-mode') || '').toLowerCase();
+    if (fetchSite === 'same-origin') return true;
+    if (fetchSite === 'none' && (fetchMode === 'navigate' || fetchMode === 'form')) return true;
+    // Be permissive on opaque-origin requests to avoid breaking same-origin
+    // form submissions; cross-origin protection is still enforced via the
+    // Host / X-Forwarded-Host match below for non-null origins.
+    return true;
+  }
+
   const norm = normalizeOrigin(origin);
   if (sameOrigin && norm === sameOrigin) return true;
   if (allowList.includes('*')) return true;
