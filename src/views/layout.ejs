@@ -9,22 +9,39 @@
   <% if (typeof extraHead !== 'undefined') { %><%- extraHead %><% } %>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand"><a href="/dashboard">inteliOCR</a></div>
-    <% if (typeof showNav === 'undefined' || showNav) { %>
-      <nav>
-        <a href="/dashboard">Overview</a>
-        <a href="/dashboard/keys">API Keys</a>
-        <a href="/dashboard/usage">Usage</a>
-        <form method="POST" action="/dashboard/logout" style="display:inline">
-          <button type="submit" class="link">Logout</button>
-        </form>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">i</div>
+        <span>inteliOCR</span>
+      </div>
+      <nav class="nav">
+        <a href="/dashboard" class="<%= active === 'overview' ? 'active' : '' %>">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+          Overview
+        </a>
+        <a href="/dashboard/keys" class="<%= active === 'keys' ? 'active' : '' %>">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+          API Keys
+        </a>
+        <a href="/dashboard/usage" class="<%= active === 'usage' ? 'active' : '' %>">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+          Usage log
+        </a>
       </nav>
-    <% } %>
-  </header>
-  <main class="container">
-    <%- body %>
-  </main>
-  <footer class="footer">inteliOCR • OCR for receipts & invoices • No content is stored.</footer>
+      <div class="sidebar-foot">
+        <div class="user">
+          <div class="avatar"><%= (userEmail && userEmail[0] || '?').toUpperCase() %></div>
+          <div class="email"><%= userEmail %></div>
+        </div>
+        <form method="POST" action="/dashboard/logout">
+          <button type="submit" class="logout-btn">Log out</button>
+        </form>
+      </div>
+    </aside>
+    <main class="content">
+      <%- body %>
+    </main>
+  </div>
 </body>
 </html>

@@ -1,27 +1,48 @@
-<% layout = 'layout' -%>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<h1>Usage log</h1>
+<div class="page-head">
+  <div>
+    <h1>Usage log</h1>
+    <div class="subtitle">Most recent API requests</div>
+  </div>
+</div>
+
 <div class="card">
-  <table class="table">
-    <thead>
-      <tr><th>When</th><th>Endpoint</th><th>Status</th><th>Latency</th><th>In</th><th>Out</th><th>Key</th><th>Error</th></tr>
-    </thead>
-    <tbody>
-      <% logs.forEach(function(l){ %>
-        <tr>
-          <td><%= l.ts %></td>
-          <td><code><%= l.endpoint %></code></td>
-          <td><%= l.status %></td>
-          <td><%= l.latency_ms %> ms</td>
-          <td><%= l.in_bytes ? (l.in_bytes/1024).toFixed(1)+' KB' : '—' %></td>
-          <td><%= l.out_bytes ? (l.out_bytes/1024).toFixed(1)+' KB' : '—' %></td>
-          <td><%= l.key_name ? l.key_name + ' ('+l.key_prefix+')' : '—' %></td>
-          <td><%= l.error_code || '' %></td>
-        </tr>
-      <% }) %>
-      <% if (!logs.length) { %>
-        <tr><td colspan="8" class="muted">No requests logged yet.</td></tr>
-      <% } %>
-    </tbody>
-  </table>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>When</th><th>Endpoint</th><th>Status</th><th>Latency</th><th>In</th><th>Out</th><th>Key</th><th>Error</th></tr>
+      </thead>
+      <tbody>
+        <% if (logs.length === 0) { %>
+          <tr><td colspan="8">
+            <div class="empty">
+              <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg></div>
+              <div class="title">No requests yet</div>
+              <div class="desc">Once clients start calling <code>/v1/ocr</code> you'll see them here.</div>
+            </div>
+          </td></tr>
+        <% } %>
+        <% logs.forEach(function(l){ %>
+          <tr>
+            <td class="muted"><%= l.ts %></td>
+            <td><code><%= l.endpoint %></code></td>
+            <td>
+              <% var s = l.status; %>
+              <% if (s >= 200 && s < 300) { %>
+                <span class="badge ok"><%= s %></span>
+              <% } else if (s >= 400 && s < 500) { %>
+                <span class="badge warn"><%= s %></span>
+              <% } else { %>
+                <span class="badge off"><%= s %></span>
+              <% } %>
+            </td>
+            <td><%= l.latency_ms %> ms</td>
+            <td><%= l.in_bytes ? (l.in_bytes/1024).toFixed(1)+' KB' : '—' %></td>
+            <td><%= l.out_bytes ? (l.out_bytes/1024).toFixed(1)+' KB' : '—' %></td>
+            <td><%= l.key_name ? l.key_name + ' <span class="muted">('+l.key_prefix+')</span>' : '<span class="muted">—</span>' %></td>
+            <td><%= l.error_code ? '<code>'+l.error_code+'</code>' : '' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
 </div>

@@ -1,55 +1,88 @@
-<% layout = 'layout' -%>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<h1>Overview</h1>
-
-<div class="cards">
-  <div class="card stat">
-    <div class="label">Requests (30d)</div>
-    <div class="value"><%= summary.total || 0 %></div>
+<div class="page-head">
+  <div>
+    <h1>Overview</h1>
+    <div class="subtitle">Last 30 days of API activity</div>
   </div>
-  <div class="card stat">
+</div>
+
+<div class="stats">
+  <div class="stat">
+    <div class="icon-bg">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    </div>
+    <div class="label">Requests</div>
+    <div class="value"><%= summary.total || 0 %></div>
+    <div class="delta">last 30 days</div>
+  </div>
+  <div class="stat">
+    <div class="icon-bg" style="color:var(--ok)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
     <div class="label">Success rate</div>
     <div class="value"><%= successRate %>%</div>
+    <div class="delta <%= successRate >= 95 ? 'up' : (successRate < 80 ? 'down' : '') %>">
+      <%= (summary.ok || 0) %> of <%= summary.total || 0 %> successful
+    </div>
   </div>
-  <div class="card stat">
+  <div class="stat">
+    <div class="icon-bg" style="color:var(--info)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </div>
     <div class="label">Avg latency</div>
-    <div class="value"><%= summary.avg_latency || 0 %> ms</div>
+    <div class="value"><%= summary.avg_latency || 0 %> <span style="font-size:14px;color:var(--muted)">ms</span></div>
+    <div class="delta">across all requests</div>
   </div>
-  <div class="card stat">
-    <div class="label">Avg input</div>
-    <div class="value"><%= avgInKb %> KB</div>
+  <div class="stat">
+    <div class="icon-bg" style="color:var(--warn)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+    </div>
+    <div class="label">Avg upload</div>
+    <div class="value"><%= avgInKb %> <span style="font-size:14px;color:var(--muted)">KB</span></div>
+    <div class="delta">mean input size</div>
+  </div>
+</div>
+
+<div class="chart-grid">
+  <div class="card">
+    <h2><span class="accent-bar"></span>Requests per day</h2>
+    <canvas id="chartRequests" height="120"></canvas>
+  </div>
+  <div class="card">
+    <h2><span class="accent-bar"></span>Status distribution</h2>
+    <canvas id="chartStatus" height="120"></canvas>
   </div>
 </div>
 
 <div class="card">
-  <h2>Requests per day (last 30 days)</h2>
-  <canvas id="chartRequests" height="120"></canvas>
-</div>
-
-<div class="card">
-  <h2>Status distribution</h2>
-  <canvas id="chartStatus" height="80"></canvas>
-</div>
-
-<div class="card">
-  <h2>Usage by API key (last 30 days)</h2>
-  <table class="table">
-    <thead>
-      <tr><th>Name</th><th>Prefix</th><th>Requests</th><th>OK</th><th>Avg latency</th><th>Quota</th></tr>
-    </thead>
-    <tbody>
-      <% perKey.forEach(function(k){ %>
-        <tr>
-          <td><%= k.name %></td>
-          <td><code><%= k.key_prefix %></code></td>
-          <td><%= k.requests %></td>
-          <td><%= k.ok %></td>
-          <td><%= k.avg_latency || '—' %> ms</td>
-          <td><%= k.monthly_quota %>/mo</td>
-        </tr>
-      <% }) %>
-    </tbody>
-  </table>
+  <h2><span class="accent-bar"></span>Usage by API key</h2>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Name</th><th>Prefix</th><th>Requests</th><th>OK</th><th>Avg latency</th><th>Quota</th></tr>
+      </thead>
+      <tbody>
+        <% if (perKey.length === 0) { %>
+          <tr><td colspan="6">
+            <div class="empty">
+              <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div>
+              <div class="title">No API keys yet</div>
+              <div class="desc">Create one in the <a href="/dashboard/keys">API Keys</a> page.</div>
+            </div>
+          </td></tr>
+        <% } %>
+        <% perKey.forEach(function(k){ %>
+          <tr>
+            <td><%= k.name %></td>
+            <td><code><%= k.key_prefix %></code></td>
+            <td><%= k.requests %></td>
+            <td><%= k.ok %></td>
+            <td><%= k.avg_latency ? k.avg_latency + ' ms' : '—' %></td>
+            <td><%= k.monthly_quota %><span class="muted">/mo</span></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <%- '<script src="/public/js/chart.umd.min.js"></script>' %>

@@ -9,14 +9,20 @@ const {
 } = require('../services/usageService');
 const { listKeys, createKey, revokeKey } = require('../services/keyService');
 const { flash, readFlash } = require('../utils/flash');
+const { config } = require('../config');
+
+const baseLayout = {
+  userEmail: config.dashboard.email,
+};
 
 function overview(req, res) {
   const summary = overallSummary(30) || {};
   const successRate = summary.total ? Math.round((summary.ok / summary.total) * 100) : 100;
   const avgInKb = summary.avg_in ? (summary.avg_in / 1024).toFixed(1) : '0.0';
   return res.render('dashboard', {
-    layout: false,
-    title: 'Dashboard — inteliOCR',
+    ...baseLayout,
+    active: 'overview',
+    title: 'Overview — inteliOCR',
     summary,
     successRate,
     avgInKb,
@@ -29,7 +35,8 @@ function overview(req, res) {
 function listKeysPage(req, res) {
   const f = readFlash(req, res);
   return res.render('keys', {
-    layout: false,
+    ...baseLayout,
+    active: 'keys',
     title: 'API Keys — inteliOCR',
     keys: listKeys(),
     newKey: f && f.newKey,
@@ -53,7 +60,8 @@ function revokeKeyPage(req, res) {
 
 function usagePage(req, res) {
   return res.render('usage', {
-    layout: false,
+    ...baseLayout,
+    active: 'usage',
     title: 'Usage — inteliOCR',
     logs: listLogs({ limit: 100, offset: 0 }),
   });

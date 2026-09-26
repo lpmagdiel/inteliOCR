@@ -1,64 +1,83 @@
-<% layout = 'layout' -%>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<h1>API Keys</h1>
+<div class="page-head">
+  <div>
+    <h1>API Keys</h1>
+    <div class="subtitle">Create and revoke API keys for your clients</div>
+  </div>
+</div>
 
 <% if (typeof newKey !== 'undefined' && newKey) { %>
   <div class="alert success">
-    New API key created. <strong>Copy it now — it won't be shown again.</strong>
-    <pre class="key"><%= newKey %></pre>
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+    <div class="body">
+      <strong>New API key created.</strong> Copy it now — it won't be shown again.
+      <pre class="key" id="newKey"><%= newKey %></pre>
+    </div>
   </div>
 <% } %>
 <% if (typeof flash !== 'undefined' && flash) { %>
-  <div class="alert success"><%= flash %></div>
+  <div class="alert success">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+    <div class="body"><%= flash %></div>
+  </div>
 <% } %>
 
 <div class="card">
-  <h2>Create new key</h2>
-  <form method="POST" action="/dashboard/keys">
-    <label>Name
-      <input type="text" name="name" required maxlength="64" />
+  <h2><span class="accent-bar"></span>Create new key</h2>
+  <form method="POST" action="/dashboard/keys" class="row" style="align-items:flex-end; gap:12px; flex-wrap:wrap">
+    <label style="flex:1; min-width:200px; margin-bottom:0">
+      Name
+      <input type="text" name="name" required maxlength="64" placeholder="e.g. mobile-app" />
     </label>
-    <label>Monthly quota
+    <label style="width:160px; margin-bottom:0">
+      Monthly quota
       <input type="number" name="monthly_quota" value="1000" min="1" max="1000000" required />
     </label>
-    <button type="submit">Create</button>
+    <button type="submit">Create key</button>
   </form>
 </div>
 
 <div class="card">
-  <h2>Existing keys</h2>
-  <table class="table">
-    <thead>
-      <tr><th>ID</th><th>Name</th><th>Prefix</th><th>Quota</th><th>Status</th><th>Created</th><th>Last used</th><th></th></tr>
-    </thead>
-    <tbody>
-      <% keys.forEach(function(k){ %>
-        <tr>
-          <td><%= k.id %></td>
-          <td><%= k.name %></td>
-          <td><code><%= k.key_prefix %></code></td>
-          <td><%= k.monthly_quota %></td>
-          <td>
-            <% if (k.is_active) { %>
-              <span class="badge ok">active</span>
-            <% } else { %>
-              <span class="badge off">revoked</span>
-            <% } %>
-          </td>
-          <td><%= k.created_at %></td>
-          <td><%= k.last_used_at || '—' %></td>
-          <td>
-            <% if (k.is_active) { %>
-              <form method="POST" action="/dashboard/keys/<%= k.id %>/revoke" onsubmit="return confirm('Revoke this key?')">
-                <button type="submit" class="danger">Revoke</button>
-              </form>
-            <% } %>
-          </td>
-        </tr>
-      <% }) %>
-      <% if (!keys.length) { %>
-        <tr><td colspan="8" class="muted">No keys yet.</td></tr>
-      <% } %>
-    </tbody>
-  </table>
+  <h2><span class="accent-bar"></span>Existing keys</h2>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>ID</th><th>Name</th><th>Prefix</th><th>Quota</th><th>Status</th><th>Created</th><th>Last used</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% if (keys.length === 0) { %>
+          <tr><td colspan="8">
+            <div class="empty">
+              <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div>
+              <div class="title">No keys yet</div>
+              <div class="desc">Create one above to get started.</div>
+            </div>
+          </td></tr>
+        <% } %>
+        <% keys.forEach(function(k){ %>
+          <tr>
+            <td class="muted">#<%= k.id %></td>
+            <td><strong><%= k.name %></strong></td>
+            <td><code><%= k.key_prefix %></code></td>
+            <td><%= k.monthly_quota %><span class="muted">/mo</span></td>
+            <td>
+              <% if (k.is_active) { %>
+                <span class="badge ok">active</span>
+              <% } else { %>
+                <span class="badge off">revoked</span>
+              <% } %>
+            </td>
+            <td class="muted"><%= k.created_at %></td>
+            <td class="muted"><%= k.last_used_at || '—' %></td>
+            <td style="text-align:right">
+              <% if (k.is_active) { %>
+                <form method="POST" action="/dashboard/keys/<%= k.id %>/revoke" style="display:inline" onsubmit="return confirm('Revoke this key? Clients using it will get 401.')">
+                  <button type="submit" class="ghost small">Revoke</button>
+                </form>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
 </div>

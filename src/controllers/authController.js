@@ -13,21 +13,19 @@ function showLogin(req, res) {
 
 async function doLogin(req, res) {
   const { email, password } = req.body || {};
-  if (!email || !password) {
-    return res.status(400).render('login', { error: 'Email and password are required.', layout: false });
-  }
+  const renderError = (msg, code) =>
+    res.status(code).render('login', { error: msg, email: config.dashboard.email, layout: false });
+  if (!email || !password) return renderError('Email and password are required.', 400);
   if (email !== config.dashboard.email || !config.dashboard.passwordHash) {
-    return res.status(401).render('login', { error: 'Invalid credentials.', layout: false });
+    return renderError('Invalid credentials.', 401);
   }
   let okPwd = false;
   try {
     okPwd = await bcrypt.compare(password, config.dashboard.passwordHash);
   } catch (_e) {
-    return res.status(500).render('login', { error: 'Auth misconfigured.', layout: false });
+    return renderError('Auth misconfigured.', 500);
   }
-  if (!okPwd) {
-    return res.status(401).render('login', { error: 'Invalid credentials.', layout: false });
-  }
+  if (!okPwd) return renderError('Invalid credentials.', 401);
   const token = signToken(email);
   setSessionCookie(res, token);
   return res.redirect('/dashboard');
