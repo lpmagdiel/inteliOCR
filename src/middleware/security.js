@@ -5,6 +5,7 @@ const hpp = require('hpp');
 const { v4: uuidv4 } = require('uuid');
 const { config } = require('../config');
 const { fail } = require('../utils/response');
+const logger = require('../utils/logger');
 
 const BUILTIN_BLOCKED_UA = [
   'python-requests',
@@ -82,12 +83,13 @@ function isOriginAllowed(origin, req, allowList, sameOrigin) {
   if (sameOrigin && norm === sameOrigin) return true;
   if (allowList.includes('*')) return true;
   if (allowList.includes(norm)) return true;
-  // Same-origin: compare the host portion only. This is robust to the
-  // scheme being `http` internally (behind Traefik) while the browser
-  // sends `https://…` as Origin.
+  // Same-origin: compare the host portion only. Robust to scheme mismatch
+  // (https in browser, http internally behind Traefik).
   const originHost = hostOf(norm);
-  const reqHost = req.get('host');
-  if (reqHost && originHost === reqHost.toLowerCase()) return true;
+  const reqHost = (req.get('host') || '').toLowerCase();
+  const xfHost = (req.get('x-forwarded-host') || '').toLowerCase().split(',')[0].trim();
+  if (reqHost && originHost === reqHost) return true;
+  if (xfHost && originHost === xfHost) return true;
   return false;
 }
 
@@ -99,24 +101,49 @@ function corsMiddleware() {
 
   return (req, res, next) => {
     const origin = req.get('origin');
-
-    // Always set Vary so caches don't mix responses by Origin
     res.setHeader('Vary', 'Origin');
 
-    // Preflight
     if (req.method === 'OPTIONS') {
       if (!isOriginAllowed(origin, req, allowList, sameOrigin)) {
+        // Never cache a failed preflight; tell the browser to re-evaluate
+        // each time so that a fixed deploy is picked up immediately.
+        res.setHeader('Cache-Control', 'no-store');
+        logger.warn(
+          {
+            origin,
+            host: req.get('host'),
+            xForwardedHost: req.get('x-forwarded-host'),
+            protocol: req.protocol,
+            allowList,
+            sameOrigin,
+            path: req.originalUrl,
+          },
+          'CORS denied (preflight)'
+        );
         return fail(res, 403, 'CORS_DENIED', 'CORS: origin not allowed');
       }
       if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Methods', allowMethods);
       res.setHeader('Access-Control-Allow-Headers', allowHeaders);
-      res.setHeader('Access-Control-Max-Age', '600');
+      // Short preflight cache so a fix is picked up without manual cache busting.
+      res.setHeader('Access-Control-Max-Age', '60');
       return res.status(204).end();
     }
 
-    // Actual request
     if (origin && !isOriginAllowed(origin, req, allowList, sameOrigin)) {
+      res.setHeader('Cache-Control', 'no-store');
+      logger.warn(
+        {
+          origin,
+          host: req.get('host'),
+          xForwardedHost: req.get('x-forwarded-host'),
+          protocol: req.protocol,
+          allowList,
+          sameOrigin,
+          path: req.originalUrl,
+        },
+        'CORS denied'
+      );
       return fail(res, 403, 'CORS_DENIED', 'CORS: origin not allowed');
     }
     if (origin) res.setHeader('Access-Control-Allow-Origin', origin);

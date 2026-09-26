@@ -54,8 +54,10 @@ function buildApp() {
   // auto-requests stop generating 404 noise in the browser console.
   app.get(['/favicon.svg', '/favicon.ico'], (req, res) => {
     res.setHeader('Content-Type', 'image/svg+xml');
-    res.setHeader('Cache-Control', 'public, max-age=86400');
-    res.sendFile(path.join(__dirname, 'public', 'favicon.svg'));
+    // Short cache + must-revalidate so a previous 404 (or any failure) is
+    // not pinned in the browser. Use ETag to allow revalidation.
+    res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate');
+    res.sendFile(path.join(__dirname, 'public', 'favicon.svg'), { etag: true });
   });
 
   app.use((req, res, next) => {
