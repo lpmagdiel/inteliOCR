@@ -37,6 +37,27 @@ function buildApp() {
   app.use(cookieParser());
   app.use(noParamPollution());
 
+  // Static assets
+  app.use(
+    '/public',
+    express.static(path.join(__dirname, 'public'), {
+      maxAge: '1d',
+      setHeaders(res, filePath) {
+        if (filePath.endsWith('.svg')) {
+          res.setHeader('Content-Type', 'image/svg+xml');
+        }
+      },
+    })
+  );
+
+  // Favicon: serve SVG under both /favicon.svg and /favicon.ico so legacy
+  // auto-requests stop generating 404 noise in the browser console.
+  app.get(['/favicon.svg', '/favicon.ico'], (req, res) => {
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.sendFile(path.join(__dirname, 'public', 'favicon.svg'));
+  });
+
   app.use((req, res, next) => {
     const start = Date.now();
     res.on('finish', () => {

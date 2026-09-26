@@ -46,6 +46,22 @@ describe('GET /', () => {
   });
 });
 
+describe('Favicon', () => {
+  test('GET /favicon.svg → 200 image/svg+xml with non-empty body', async () => {
+    const res = await request(app).get('/favicon.svg').set('User-Agent', 'jest');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/image\/svg/);
+    const body = res.text || (res.body && res.body.toString());
+    expect(body).toMatch(/^<svg/);
+  });
+
+  test('GET /favicon.ico → 200 (legacy browsers)', async () => {
+    const res = await request(app).get('/favicon.ico').set('User-Agent', 'jest');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/image\/svg/);
+  });
+});
+
 describe('POST /v1/ocr', () => {
   test('rejects missing file', async () => {
     const res = await request(app)

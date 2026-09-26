@@ -58,4 +58,15 @@ describe('CORS middleware (against a real listening server)', () => {
       .set('Access-Control-Request-Method', 'POST');
     expect(res.status).toBe(403);
   });
+
+  test('Same-host even when scheme differs (proxy scenario: Origin https, server http)', async () => {
+    // Simulate: the browser sends Origin https://host:port but req.protocol is http
+    // (this is what happens behind Traefik when trust proxy is set but X-Forwarded-Proto is missing).
+    const res = await request(server)
+      .get('/v1/health')
+      .set('User-Agent', 'jest')
+      .set('Origin', `https://127.0.0.1:${port}`)
+      .set('X-Forwarded-Proto', 'https');
+    expect(res.status).toBe(200);
+  });
 });

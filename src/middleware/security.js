@@ -66,11 +66,13 @@ function normalizeOrigin(o) {
   return String(o).trim().replace(/\/+$/, '');
 }
 
-function originFromRequest(req) {
-  const proto = req.protocol || 'http';
-  const host = req.get('host');
-  if (!host) return null;
-  return `${proto}://${host}`;
+function hostOf(urlOrHost) {
+  if (!urlOrHost) return '';
+  const s = String(urlOrHost).trim().replace(/\/+$/, '');
+  // strip scheme
+  const m = s.match(/^[a-z]+:\/\/([^/]+)/i);
+  if (m) return m[1].toLowerCase();
+  return s.toLowerCase();
 }
 
 function isOriginAllowed(origin, req, allowList, sameOrigin) {
@@ -80,9 +82,12 @@ function isOriginAllowed(origin, req, allowList, sameOrigin) {
   if (sameOrigin && norm === sameOrigin) return true;
   if (allowList.includes('*')) return true;
   if (allowList.includes(norm)) return true;
-  // Same-origin: compare against the request's own host
-  const reqOrigin = originFromRequest(req);
-  if (reqOrigin && normalizeOrigin(reqOrigin) === norm) return true;
+  // Same-origin: compare the host portion only. This is robust to the
+  // scheme being `http` internally (behind Traefik) while the browser
+  // sends `https://…` as Origin.
+  const originHost = hostOf(norm);
+  const reqHost = req.get('host');
+  if (reqHost && originHost === reqHost.toLowerCase()) return true;
   return false;
 }
 
