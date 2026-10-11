@@ -77,6 +77,13 @@ function buildApp() {
   app.use('/v1', apiRouter);
   app.use('/dashboard', dashboardRouter);
 
+  app.get('/example', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'examples', 'browser.html'));
+  });
+  app.get('/example/javascript-usage.js', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'examples', 'javascript-usage.js'));
+  });
+
   app.get('/', (req, res) => {
     res.json({
       success: true,
@@ -88,6 +95,7 @@ function buildApp() {
           health: 'GET /v1/health',
           ocr: 'POST /v1/ocr',
           dashboard: 'GET /dashboard',
+          example: 'GET /example',
         },
       },
       meta: { request_id: res.locals.requestId, timestamp: new Date().toISOString() },
