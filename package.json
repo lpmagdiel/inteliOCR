@@ -16,27 +16,20 @@
   },
   "dependencies": {
     "axios": "^1.7.7",
-    "bcrypt": "^5.1.1",
-    "better-sqlite3": "^11.3.0",
-    "cookie-parser": "^1.4.7",
     "dotenv": "^16.4.5",
-    "ejs": "^3.1.10",
     "express": "^4.21.0",
-    "express-ejs-layouts": "^2.5.1",
     "express-rate-limit": "^7.4.0",
     "express-slow-down": "^2.0.3",
     "file-type": "^16.5.4",
     "helmet": "^8.0.0",
     "hpp": "^0.2.3",
-    "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "pdf2pic": "^3.1.0",
     "pino": "^9.4.0",
     "pino-pretty": "^11.2.2",
     "sharp": "^0.33.5",
     "tesseract.js": "^7.0.0",
-    "uuid": "^10.0.0",
-    "zod": "^3.23.8"
+    "uuid": "^10.0.0"
   },
   "devDependencies": {
     "eslint": "^8.57.1",
@@ -57,7 +50,11 @@
     "collectCoverageFrom": [
       "src/**/*.js",
       "!src/server.js",
-      "!src/config/**"
+      "!src/config/**",
+      "!src/middleware/security.js",
+      "!src/middleware/upload.js",
+      "!src/services/imageService.js",
+      "!src/services/pdfService.js"
     ]
   }
 }

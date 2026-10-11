@@ -4,7 +4,6 @@ const asyncHandler = require('../utils/asyncHandler');
 const { preprocessImage } = require('../services/imageService');
 const { pdfToImages } = require('../services/pdfService');
 const { callMinimaxVision } = require('../services/minimaxService');
-const { touchLastUsed } = require('../services/keyService');
 const { ok, fail } = require('../utils/response');
 
 async function runOcr(req, res) {
@@ -32,12 +31,12 @@ async function runOcr(req, res) {
     return fail(res, e.status || 500, e.code || 'OCR_PROVIDER_ERROR', e.message, e.details || {});
   }
 
-  if (req.apiKey) touchLastUsed(req.apiKey.id);
   return ok(res, result.data, {
     latency_ms: Date.now() - start,
     model: result.meta.model,
     pages: pages.length,
     finish_reason: result.meta.finish_reason,
+    engine: 'minimax',
   });
 }
 

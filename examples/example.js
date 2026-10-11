@@ -16,17 +16,15 @@
   function refresh() {
     runBtn.disabled = !$('file').files[0];
   }
-  $('apiKey').addEventListener('input', refresh);
   $('file').addEventListener('change', refresh);
   engineSel.addEventListener('change', syncLangVisibility);
   syncLangVisibility();
 
-runBtn.addEventListener('click', async () => {
+  runBtn.addEventListener('click', async () => {
     const file = $('file').files[0];
-    const apiKey = $('apiKey').value.trim() || null;
     const engine = engineSel.value;
     const type = typeSel.value;
-    const lang = langInput.value.trim() || 'eng';
+    const lang = langInput.value;
     const resultPanel = $('resultPanel');
     const resultEl = $('result');
 
@@ -35,7 +33,7 @@ runBtn.addEventListener('click', async () => {
     statusEl.className = 'sub';
     resultPanel.style.display = 'none';
 
-    const client = new InteliOCR({ apiKey });
+    const client = new InteliOCR();
     const opts = engine === 'basic' ? { lang } : { type };
     try {
       const { data, meta } = await client.run(engine, file, opts);

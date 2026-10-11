@@ -8,17 +8,12 @@ jest.mock('../src/services/pdfService', () => ({
 }));
 
 const { buildApp } = require('../src/app');
-const { getDb } = require('../src/db/client');
-const { createKey } = require('../src/services/keyService');
 const { makeJpegBuffer, makePngBuffer, makeFakePdfBuffer } = require('./helpers/fixtures');
 
 let app;
-let key;
 
 beforeAll(() => {
   app = buildApp();
-  getDb();
-  key = createKey({ name: 'test', monthlyQuota: 1000 });
 });
 
 afterAll(() => {
@@ -26,9 +21,9 @@ afterAll(() => {
   nock.restore();
 });
 
-describe('GET /v1/health', () => {
+describe('GET /health', () => {
   test('returns ok', async () => {
-    const res = await request(app).get('/v1/health').set('User-Agent', 'jest');
+    const res = await request(app).get('/health').set('User-Agent', 'jest');
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.status).toBe('ok');
@@ -40,9 +35,9 @@ describe('GET /', () => {
     const res = await request(app).get('/').set('User-Agent', 'jest');
     expect(res.status).toBe(200);
     expect(res.body.data.service).toBe('inteliocr');
-    expect(res.body.data.endpoints.health).toBe('GET /v1/health');
-    expect(res.body.data.endpoints.ocr).toBe('POST /v1/ocr');
-    expect(res.body.data.endpoints.dashboard).toBe('GET /dashboard');
+    expect(res.body.data.endpoints.health).toBe('GET /health');
+    expect(res.body.data.endpoints.ocr).toBe('POST /ocr');
+    expect(res.body.data.endpoints.basic).toBe('POST /basic');
   });
 });
 
@@ -62,57 +57,18 @@ describe('Favicon', () => {
   });
 });
 
-describe('POST /v1/ocr', () => {
+describe('POST /ocr', () => {
   test('rejects missing file', async () => {
-    const res = await request(app)
-      .post('/v1/ocr')
-      .set('User-Agent', 'jest')
-      .set('X-API-Key', key.key);
+    const res = await request(app).post('/ocr').set('User-Agent', 'jest');
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('MISSING_FILE');
-  });
-
-  test('allows requests without API key (key is optional)', async () => {
-    nock('https://minimax.test')
-      .post('/chat/completions')
-      .reply(200, {
-        model: 'MiniMax-VL',
-        choices: [
-          {
-            finish_reason: 'stop',
-            message: {
-              content: JSON.stringify({ document_type: 'receipt', merchant: 'NO-KEY MART', total: 1 }),
-            },
-          },
-        ],
-      });
-
-    const buf = await makeJpegBuffer();
-    const res = await request(app)
-      .post('/v1/ocr')
-      .set('User-Agent', 'jest')
-      .attach('file', buf, { filename: 'r.jpg', contentType: 'image/jpeg' });
-    expect(res.status).toBe(200);
-    expect(res.body.data.merchant).toBe('NO-KEY MART');
-  });
-
-  test('rejects invalid API key', async () => {
-    const buf = await makeJpegBuffer();
-    const res = await request(app)
-      .post('/v1/ocr')
-      .set('User-Agent', 'jest')
-      .set('X-API-Key', 'ioc_bogus_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-      .attach('file', buf, { filename: 'r.jpg', contentType: 'image/jpeg' });
-    expect(res.status).toBe(401);
-    expect(res.body.error.code).toBe('INVALID_API_KEY');
   });
 
   test('rejects unsupported format', async () => {
     const buf = Buffer.from('hello world');
     const res = await request(app)
-      .post('/v1/ocr')
+      .post('/ocr')
       .set('User-Agent', 'jest')
-      .set('X-API-Key', key.key)
       .attach('file', buf, { filename: 'x.txt', contentType: 'text/plain' });
     expect(res.status).toBe(415);
     expect(res.body.error.code).toBe('UNSUPPORTED_FORMAT');
@@ -121,9 +77,8 @@ describe('POST /v1/ocr', () => {
   test('blocks suspicious user agents', async () => {
     const buf = await makeJpegBuffer();
     const res = await request(app)
-      .post('/v1/ocr')
+      .post('/ocr')
       .set('User-Agent', 'python-requests/2.31')
-      .set('X-API-Key', key.key)
       .attach('file', buf, { filename: 'r.jpg', contentType: 'image/jpeg' });
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe('BLOCKED_UA');
@@ -134,7 +89,7 @@ describe('POST /v1/ocr', () => {
     nock('https://minimax.test')
       .post('/chat/completions')
       .reply(200, {
-        model: 'MiniMax-VL',
+        model: 'MiniMax-M3',
         choices: [
           {
             finish_reason: 'stop',
@@ -154,9 +109,8 @@ describe('POST /v1/ocr', () => {
       });
 
     const res = await request(app)
-      .post('/v1/ocr')
+      .post('/ocr')
       .set('User-Agent', 'jest')
-      .set('X-API-Key', key.key)
       .field('type', 'receipt')
       .attach('file', buf, { filename: 'r.jpg', contentType: 'image/jpeg' });
 
@@ -164,7 +118,7 @@ describe('POST /v1/ocr', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.merchant).toBe('TEST MART');
     expect(res.body.data.total).toBe(9.99);
-    expect(res.body.meta.model).toBe('MiniMax-VL');
+    expect(res.body.meta.model).toBe('MiniMax-M3');
     expect(res.body.meta.latency_ms).toBeGreaterThanOrEqual(0);
   });
 
@@ -173,14 +127,13 @@ describe('POST /v1/ocr', () => {
     nock('https://minimax.test')
       .post('/chat/completions')
       .reply(200, {
-        model: 'MiniMax-VL',
+        model: 'MiniMax-M3',
         choices: [{ finish_reason: 'stop', message: { content: '{"document_type":"invoice","total":42}' } }],
       });
 
     const res = await request(app)
-      .post('/v1/ocr')
+      .post('/ocr')
       .set('User-Agent', 'jest')
-      .set('X-API-Key', key.key)
       .attach('file', buf, { filename: 'r.png', contentType: 'image/png' });
 
     expect(res.status).toBe(200);
@@ -192,9 +145,8 @@ describe('POST /v1/ocr', () => {
     nock('https://minimax.test').post('/chat/completions').reply(500, { error: 'boom' });
 
     const res = await request(app)
-      .post('/v1/ocr')
+      .post('/ocr')
       .set('User-Agent', 'jest')
-      .set('X-API-Key', key.key)
       .attach('file', buf, { filename: 'r.jpg', contentType: 'image/jpeg' });
 
     expect(res.status).toBe(502);
@@ -208,9 +160,8 @@ describe('POST /v1/ocr', () => {
       .replyWithError({ code: 'ECONNABORTED', message: 'timeout of 50ms exceeded' });
 
     const res = await request(app)
-      .post('/v1/ocr')
+      .post('/ocr')
       .set('User-Agent', 'jest')
-      .set('X-API-Key', key.key)
       .attach('file', buf, { filename: 'r.jpg', contentType: 'image/jpeg' });
 
     expect(res.status).toBe(504);
@@ -226,9 +177,8 @@ describe('POST /v1/ocr', () => {
 
     const pdf = makeFakePdfBuffer();
     const res = await request(app)
-      .post('/v1/ocr')
+      .post('/ocr')
       .set('User-Agent', 'jest')
-      .set('X-API-Key', key.key)
       .attach('file', pdf, { filename: 'r.pdf', contentType: 'application/pdf' });
     expect(res.status).toBe(200);
     expect(res.body.data.total).toBe(1);

@@ -4,7 +4,6 @@ const Tesseract = require('tesseract.js');
 const asyncHandler = require('../utils/asyncHandler');
 const { preprocessImage } = require('../services/imageService');
 const { pdfToImages } = require('../services/pdfService');
-const { touchLastUsed } = require('../services/keyService');
 const { ok, fail } = require('../utils/response');
 
 const SUPPORTED_LANGS = [
@@ -69,7 +68,6 @@ async function runBasic(req, res) {
     }
   }
 
-  if (req.apiKey) touchLastUsed(req.apiKey.id);
   return ok(
     res,
     {

@@ -27,19 +27,4 @@ function ipSlowDown() {
   });
 }
 
-function keyLimiter() {
-  return rateLimit({
-    windowMs: config.limits.rateLimitWindowMs,
-    max: config.limits.rateLimitKeyPerMin,
-    standardHeaders: true,
-    legacyHeaders: false,
-    keyGenerator: (req) => req.apiKey ? `key:${req.apiKey.id}` : `ip:${req.ip}`,
-    skip: (req) => !req.apiKey,
-    handler: (req, res) =>
-      fail(res, 429, 'RATE_LIMITED', 'API key rate limit exceeded.', {
-        retry_after_seconds: Math.ceil(config.limits.rateLimitWindowMs / 1000),
-      }),
-  });
-}
-
-module.exports = { ipLimiter, ipSlowDown, keyLimiter };
+module.exports = { ipLimiter, ipSlowDown };

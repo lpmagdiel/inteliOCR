@@ -9,69 +9,63 @@
  *
  * Usage:
  *   const { InteliOCR } = require('./javascript-usage');
- *   const client = new InteliOCR();                       // anonymous usage
- *   const client = new InteliOCR({ apiKey: 'ioc_xxxx_yyyy' }); // counted per key
+ *   const client = new InteliOCR();                       // same-origin (browser)
+ *   const client = new InteliOCR({ endpoint: 'https://host' }); // remote
  *   const { data, meta } = await client.ocr(fileBlob, { type: 'receipt' });
  *
  * Engines:
- *   - 'ia'    → POST /api/ia     (MiniMax Vision, structured JSON)
- *   - 'basic' → POST /api/basic  (tesseract.js, raw text)
- *   - 'v1'    → POST /v1/ocr     (alias of 'ia', MiniMax Vision)
+ *   - 'ocr'   → POST /ocr    (MiniMax Vision, structured JSON)
+ *   - 'basic' → POST /basic  (tesseract.js, raw text)
  *
  * In the browser, either include this file with a <script> tag (it exposes
  * window.InteliOCR) or import it as ESM:
  *   import { InteliOCR } from './javascript-usage.js';
  */
 
-const DEFAULT_ENDPOINT_NODE = 'https://inteliapi-inteliocr-api-f1bso8-15ce77-186-240-153-209.sslip.io';
+const DEFAULT_ENDPOINT_NODE = 'http://localhost:3000';
 const DEFAULT_ENDPOINT = (typeof window !== 'undefined' && window.location && window.location.origin)
   ? window.location.origin
   : DEFAULT_ENDPOINT_NODE;
 
 const ENGINE_PATHS = {
-  v1: '/v1/ocr',
-  ia: '/api/ia',
-  basic: '/api/basic',
+  ocr: '/ocr',
+  basic: '/basic',
 };
 
 class InteliOCR {
   /**
    * @param {Object} [opts]
-   * @param {string} [opts.apiKey]    - Optional. API key in the form `ioc_<prefix>_<secret>`.
-   *                                    If provided, usage is counted per-key and the
-   *                                    monthly quota is enforced server-side.
    * @param {string} [opts.endpoint] - Base URL. In the browser, defaults to
    *                                    `window.location.origin` (same origin as the
    *                                    page, so CSP `connect-src 'self'` is honored).
-   *                                    In Node, defaults to the deployed public instance.
+   *                                    In Node, defaults to `http://localhost:3000`.
    * @param {number} [opts.timeoutMs] - Request timeout in ms (default 60000).
    */
-  constructor({ apiKey = null, endpoint = DEFAULT_ENDPOINT, timeoutMs = 60_000 } = {}) {
-    this.apiKey = apiKey;
+  constructor({ endpoint = DEFAULT_ENDPOINT, timeoutMs = 60_000 } = {}) {
     this.endpoint = endpoint.replace(/\/+$/, '');
     this.timeoutMs = timeoutMs;
   }
 
-  /** GET /v1/health — liveness probe. */
+  /** GET /health — liveness probe. */
   async health() {
-    return this._request('GET', '/v1/health');
+    return this._request('GET', '/health');
   }
 
   /**
    * Run OCR through a given engine.
    *
-   * @param {'v1'|'ia'|'basic'} engine
+   * @param {'ocr'|'basic'} engine
    * @param {Blob|File|Buffer} file - JPG, PNG, WebP or PDF (≤ 10 MB images / 15 MB PDF).
    * @param {Object} [opts]
-   * @param {'receipt'|'invoice'} [opts.type] - Hint for the extractor (`ia` engine).
-   * @param {string} [opts.lang]              - Tesseract language code (`basic` engine, default 'eng').
-   * @param {number[]} [opts.pages]           - 1-indexed pages to process (`basic` engine, PDF only).
-   * @param {AbortSignal} [opts.signal]       - Forwarded to fetch().
+   * @param {'receipt'|'invoice'} [opts.type] - Hint for the extractor (`ocr` engine).
+   * @param {'eng'|'spa'}         [opts.lang] - Tesseract language code (`basic` engine, default 'eng').
+   * @param {number[]}            [opts.pages] - 1-indexed pages to process (`basic` engine, PDF only).
+   * @param {AbortSignal}         [opts.signal] - Forwarded to fetch().
    * @returns {Promise<{success:true, data:object, meta:object}>}
    */
   async run(engine, file, opts = {}) {
     const path = ENGINE_PATHS[engine];
-    if (!path) throw new Error(`InteliOCR: unknown engine "${engine}". Use 'v1', 'ia' or 'basic'.`);
+    if (!path) throw new Error(`InteliOCR: unknown engine "${engine}". Use 'ocr' or 'basic'.`);
 
     const fd = new FormData();
     fd.append('file', this._toBlob(file), this._filename(file));
@@ -89,17 +83,12 @@ class InteliOCR {
     });
   }
 
-  /** POST /v1/ocr — MiniMax Vision (legacy/default). */
+  /** POST /ocr — MiniMax Vision. */
   ocr(file, opts = {}) {
-    return this.run('v1', file, opts);
+    return this.run('ocr', file, opts);
   }
 
-  /** POST /api/ia — MiniMax Vision. */
-  ia(file, opts = {}) {
-    return this.run('ia', file, opts);
-  }
-
-  /** POST /api/basic — tesseract.js (raw text). */
+  /** POST /basic — tesseract.js (raw text). */
   basic(file, opts = {}) {
     return this.run('basic', file, opts);
   }
@@ -116,11 +105,9 @@ class InteliOCR {
 
     let res;
     try {
-      const headers = { ...(body ? {} : { Accept: 'application/json' }) };
-      if (this.apiKey) headers['X-API-Key'] = this.apiKey;
       res = await fetch(`${this.endpoint}${path}`, {
         method,
-        headers,
+        headers: body ? {} : { Accept: 'application/json' },
         body,
         signal: ctrl.signal,
       });
@@ -152,7 +139,6 @@ class InteliOCR {
 
   _toBlob(file) {
     if (typeof Blob !== 'undefined' && file instanceof Blob) return file;
-    // Node.js Buffer (legacy environments). Wrap as a Blob with explicit type.
     if (typeof Buffer !== 'undefined' && Buffer.isBuffer(file)) {
       return new Blob([file], { type: 'application/octet-stream' });
     }

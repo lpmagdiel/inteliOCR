@@ -1,29 +1,25 @@
 # inteliOCR
 
-REST API for OCR on **receipts and invoices**, powered by the **MiniMax Vision API**.
+REST API for OCR on **receipts and invoices**, powered by the **MiniMax Vision API**. Stateless, no auth, no DB, no dashboard — just two endpoints and a browser demo.
 
-- Upload an image (JPG / PNG / WebP) or a PDF → get structured JSON back.
-- No image content is ever written to disk. Only request metadata (timestamp, status, latency, byte counts, hashed IP) is stored in SQLite.
-- Dashboard for usage metrics & API-key management, login with email + password.
-- Bot/abuse protection built-in: rate limiting, progressive slow-down, UA filter, helmet headers, HPP.
+- Upload an image (JPG / PNG / WebP) or a PDF → get structured JSON back (MiniMax Vision) or raw text (tesseract.js).
+- No image content is ever written to disk.
+- Basic bot protection: User-Agent filter + per-IP rate limit.
 - Designed to run on **Dockploy** (or any Docker host) with a single `docker compose up`.
 
 ---
 
-## Table of contents
+## Endpoints
 
-1. [Quick start](#quick-start)
-2. [Environment variables](#environment-variables)
-3. [API reference](#api-reference)
-4. [Response format](#response-format)
-5. [Error codes](#error-codes)
-6. [Dashboard](#dashboard)
-7. [Privacy & storage](#privacy--storage)
-8. [Deploy on Dockploy](#deploy-on-dockploy)
-9. [Project structure](#project-structure)
-10. [Development](#development)
-11. [Testing](#testing)
-12. [Troubleshooting](#troubleshooting)
+| Method | Path | Description |
+|---|---|---|
+| `GET`  | `/health`     | Liveness probe |
+| `POST` | `/ocr`        | MiniMax Vision — structured JSON |
+| `POST` | `/basic`      | tesseract.js — raw text per page |
+| `GET`  | `/`           | Service info |
+| `GET`  | `/example/`   | Browser demo UI |
+
+No API key required. The upstream MiniMax API key is read from `.env` (`MINIMAX_API_KEY`).
 
 ---
 
@@ -35,10 +31,7 @@ REST API for OCR on **receipts and invoices**, powered by the **MiniMax Vision A
 git clone <your-fork-url> inteliocr
 cd inteliocr
 cp .env.example .env
-# Edit .env and fill in MINIMAX_API_KEY, JWT_SECRET, HASH_PEPPER, DASHBOARD_PASSWORD_HASH
-
-# Generate the dashboard password hash:
-node -e "console.log(require('bcrypt').hashSync('your-password', 12))"
+# Edit .env and fill in MINIMAX_API_KEY
 
 npm install
 npm run dev
@@ -46,20 +39,14 @@ npm run dev
 
 The server listens on `http://localhost:3000`.
 
-### B) Docker (recommended for production)
+Open `http://localhost:3000/example/` for the browser demo.
+
+### B) Docker
 
 ```bash
-# 1. Build
 docker build -t inteliocr:latest .
-
-# 2. Run with persistent SQLite volume
-docker run -d \
-  --name inteliocr \
-  --restart unless-stopped \
-  -p 3000:3000 \
-  -v inteliocr-data:/data \
-  --env-file .env \
-  inteliocr:latest
+docker run -d --name inteliocr --restart unless-stopped -p 3000:3000 \
+  --env-file .env inteliocr:latest
 ```
 
 Or with the bundled compose file:
@@ -71,77 +58,46 @@ docker compose up -d
 ### C) Health check
 
 ```bash
-curl http://localhost:3000/v1/health
-```
-
-```json
-{ "success": true, "data": { "status": "ok", "uptime": 12.4, "timestamp": "..." }, "meta": { ... } }
+curl http://localhost:3000/health
 ```
 
 ---
 
 ## Environment variables
 
-All variables live in `.env` (see `.env.example` for the full list). The most important ones:
-
 | Var | Required | Default | Description |
 |---|---|---|---|
 | `PORT` | no | `3000` | HTTP port |
 | `NODE_ENV` | no | `production` | `development` enables pretty logs |
-| `DATA_DIR` | no | `./data` | Where SQLite lives (mount a volume here) |
-| `TRUST_PROXY` | no | `1` | Trust X-Forwarded-* (set to `1` behind Traefik/Caddy) |
+| `TRUST_PROXY` | no | `1` | Trust X-Forwarded-* behind Traefik/Caddy |
 | `LOG_LEVEL` | no | `info` | pino log level |
-| `PUBLIC_URL` | no | _(empty)_ | Public URL of this instance. Surfaced in `GET /` and useful for logs/links. |
-| `DASHBOARD_EMAIL` | no | `lpzcode@yahoo.com` | Login email for the dashboard |
-| `DASHBOARD_PASSWORD_HASH` | **yes (prod)** | — | bcrypt hash of the dashboard password |
-| `JWT_SECRET` | **yes (prod)** | — | Min. 32 random chars. Used to sign session cookies. |
-| `JWT_EXPIRES_IN` | no | `12h` | Dashboard session lifetime |
+| `PUBLIC_URL` | no | _(empty)_ | Public URL of this instance (only used in `/` info) |
 | `MINIMAX_API_KEY` | **yes (prod)** | — | MiniMax API key |
 | `MINIMAX_API_BASE` | no | `https://api.minimaxi.chat/v1` | MiniMax API base URL |
-| `MINIMAX_MODEL` | no | `MiniMax-M3` | Vision-capable model. Older `MiniMax-VL` was removed. |
+| `MINIMAX_MODEL` | no | `MiniMax-M3` | Vision-capable model |
 | `MINIMAX_TIMEOUT_MS` | no | `30000` | Upstream request timeout |
-| `MAX_UPLOAD_IMAGE_MB` | no | `10` | Max size for image uploads |
-| `MAX_UPLOAD_PDF_MB` | no | `15` | Max size for PDF uploads |
-| `RATE_LIMIT_IP_PER_MIN` | no | `30` | Per-IP limit |
-| `RATE_LIMIT_KEY_PER_MIN` | no | `120` | Per-API-key limit |
+| `MAX_UPLOAD_IMAGE_MB` | no | `10` | Max image upload size |
+| `MAX_UPLOAD_PDF_MB` | no | `15` | Max PDF upload size |
+| `RATE_LIMIT_WINDOW_MS` | no | `60000` | Rate-limit window |
+| `RATE_LIMIT_IP_PER_MIN` | no | `30` | Per-IP request limit |
 | `IMG_MAX_DIMENSION` | no | `1600` | Largest side after preprocessing |
 | `IMG_QUALITY` | no | `82` | JPEG quality (1–100) |
-| `CORS_ORIGINS` | no | _(empty)_ | Comma-separated allowlist |
+| `CORS_ORIGINS` | no | `*` | Comma-separated allowlist, `*` allows any origin |
 | `BLOCKED_UA_EXTRA` | no | _(empty)_ | Additional UA substrings to block |
-| `HASH_PEPPER` | **yes (prod)** | dev | Pepper for hashing IPs and API keys |
-
-Generate the dashboard password hash:
-
-```bash
-node -e "console.log(require('bcrypt').hashSync('your-password', 12))"
-```
-
-Generate a strong `JWT_SECRET`:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-```
 
 ---
 
 ## API reference
 
-### `POST /v1/ocr`
+### `POST /ocr`
 
-Process a receipt or invoice image/PDF and return structured JSON.
-
-> The `X-API-Key` header is **optional**. The upstream MiniMax API key is
-> read from `.env` (`MINIMAX_API_KEY`) and used server-side. If you send a
-> valid key, requests are counted per-key and the monthly quota is enforced.
-> Without a key, requests are allowed and only the per-IP rate limit applies.
+Process a receipt or invoice image/PDF and return structured JSON via MiniMax Vision.
 
 **Request**
 
 ```
-POST /v1/ocr
-Headers:                          # all optional
-  X-API-Key: ioc_<prefix>_<secret>
-  Content-Type: multipart/form-data
+POST /ocr
+Content-Type: multipart/form-data
 Body (multipart fields):
   file: <binary>          # required — JPG, PNG, WebP or PDF
   type: "receipt" | "invoice"   # optional hint, defaults to auto-detect
@@ -150,7 +106,7 @@ Body (multipart fields):
 **Example with curl**
 
 ```bash
-curl -X POST http://localhost:3000/v1/ocr \
+curl -X POST http://localhost:3000/ocr \
   -F "file=@./receipt.jpg" \
   -F "type=receipt"
 ```
@@ -162,10 +118,7 @@ const fd = new FormData();
 fd.append('file', fileInput.files[0]);
 fd.append('type', 'receipt');
 
-const res = await fetch('https://your.host/v1/ocr', {
-  method: 'POST',
-  body: fd,
-});
+const res = await fetch('/ocr', { method: 'POST', body: fd });
 const json = await res.json();
 console.log(json.data.total, json.data.currency);
 ```
@@ -176,7 +129,7 @@ console.log(json.data.total, json.data.currency);
 import requests
 with open('receipt.jpg', 'rb') as f:
     r = requests.post(
-        'https://your.host/v1/ocr',
+        'https://your.host/ocr',
         files={'file': ('receipt.jpg', f, 'image/jpeg')},
         data={'type': 'receipt'},
         timeout=60,
@@ -212,20 +165,66 @@ print(r.json()['data'])
     "request_id": "9f8b...",
     "timestamp": "2025-09-26T12:34:56.789Z",
     "latency_ms": 1834,
-    "model": "MiniMax-VL",
+    "model": "MiniMax-M3",
     "pages": 1,
-    "finish_reason": "stop"
+    "finish_reason": "stop",
+    "engine": "minimax"
   }
 }
 ```
 
-### `GET /v1/health`
+### `POST /basic`
+
+Process a receipt or invoice image/PDF with tesseract.js and return raw text per page.
+
+**Request**
+
+```
+POST /basic
+Content-Type: multipart/form-data
+Body (multipart fields):
+  file: <binary>          # required — JPG, PNG, WebP or PDF
+  lang: "eng" | "spa"     # optional, default "eng"
+  pages: "1,3"            # optional, 1-indexed pages to process (PDF only)
+```
+
+**Example with curl**
+
+```bash
+curl -X POST http://localhost:3000/basic \
+  -F "file=@./factura.jpg" \
+  -F "lang=spa"
+```
+
+**Successful response (200)**
+
+```json
+{
+  "success": true,
+  "data": {
+    "engine": "tesseract.js",
+    "language": "eng",
+    "pages": 1,
+    "text": "STARBUCKS COFFEE\n2x Espresso   $5.00\n...",
+    "results": [
+      { "page": 1, "text": "...", "confidence": 92.3, "lines": 14, "words": 87 }
+    ]
+  },
+  "meta": { "latency_ms": 612, "model": "tesseract:eng", "pages_total": 1, "pages_processed": 1 }
+}
+```
+
+### `GET /health`
 
 Liveness probe (used by Docker `HEALTHCHECK`). No auth.
 
+### `GET /example/`
+
+Static browser demo UI (`examples/browser.html`). Lets you pick a file, engine, language and see the JSON result without writing code.
+
 ### `GET /`
 
-Service info.
+Service info (endpoints, public URL).
 
 ---
 
@@ -267,12 +266,10 @@ All responses use a single envelope:
 |---|---|---|
 | 400 | `MISSING_FILE` | `file` field missing in multipart body |
 | 400 | `INVALID_FILE` | File could not be preprocessed |
-| 401 | `INVALID_API_KEY` | An `X-API-Key` header was provided but the key is unknown or revoked |
 | 403 | `BLOCKED_UA` | User-Agent is empty or matches the blocklist |
 | 413 | `FILE_TOO_LARGE` | Upload exceeds the per-format limit |
 | 415 | `UNSUPPORTED_FORMAT` | Not one of JPG / PNG / WebP / PDF |
-| 429 | `RATE_LIMITED` | Too many requests from this IP/key |
-| 429 | `QUOTA_EXCEEDED` | Monthly quota reached |
+| 429 | `RATE_LIMITED` | Too many requests from this IP |
 | 502 | `OCR_PROVIDER_ERROR` | Upstream provider returned an error or non-JSON |
 | 504 | `OCR_TIMEOUT` | Upstream provider did not respond in time |
 | 500 | `INTERNAL_ERROR` | Unhandled exception (see logs) |
@@ -280,58 +277,23 @@ All responses use a single envelope:
 
 ---
 
-## Dashboard
+## Bot protection
 
-The dashboard is a small server-rendered UI for managing API keys and reading usage metrics.
-
-- Login at `https://your.host/dashboard/login`
-- Default email: `lpzcode@yahoo.com` (change via `DASHBOARD_EMAIL`)
-- Password is verified against `DASHBOARD_PASSWORD_HASH`
-- Session is a JWT stored in an `httpOnly`, `SameSite=Strict`, `Secure` cookie (12 h)
-
-Pages:
-
-- **Overview** — totals, success rate, avg latency, avg input size, requests/day chart, status pie, per-key table.
-- **API Keys** — list, create (returns the raw key **once**), revoke.
-- **Usage** — paginated recent-request log.
-
-Nothing about uploaded receipts/invoices ever reaches the dashboard — only request metadata.
-
----
-
-## Privacy & storage
-
-inteliOCR is designed to be privacy-respecting:
-
-- **No OCR content is ever persisted.** Uploaded files are buffered in RAM (`multer.memoryStorage`), preprocessed in-memory with `sharp`, sent to the OCR provider, and dropped. They are not written to disk under any code path.
-- **Only metadata is stored** in SQLite (`/data/usage.db`):
-  - API key id (hashed, never the raw key)
-  - timestamp
-  - IP hash (`sha256(ip + HASH_PEPPER)`)
-  - endpoint, status, latency, byte counts, error code
-- API keys are stored as `sha256(rawKey + HASH_PEPPER)`. The raw key is shown **once** at creation and never again.
-- Logs (`pino`) redact `Authorization`, `X-API-Key`, passwords and cookies.
-
-If you want to clear history, delete `/data/usage.db` (and the WAL files) — the schema will be recreated automatically on the next request.
+- **User-Agent filter**: requests with no UA or a known scraping UA (`python-requests`, `wget`, `scrapy`, etc.) are rejected with `403 BLOCKED_UA`. Extend via `BLOCKED_UA_EXTRA`.
+- **Per-IP rate limit**: `RATE_LIMIT_IP_PER_MIN` requests per minute per IP (default 30). Returns `429 RATE_LIMITED`.
+- **Upload limits**: per-format MB cap on multipart bodies (multer + a magic-byte sniff, so the extension can't lie).
 
 ---
 
 ## Deploy on Dockploy
 
-1. In Dockploy, create a new **Service**.
-2. Point the **Source** to your Git repo (or upload a tarball).
+1. Create a new **Service**.
+2. Point **Source** to your Git repo.
 3. **Build method**: `Dockerfile`.
 4. **Port**: `3000` (TCP).
-5. Mount a persistent volume at `/data` so SQLite survives restarts.
-6. Add the environment variables from [Environment variables](#environment-variables). At minimum:
-   - `MINIMAX_API_KEY`
-   - `JWT_SECRET` (generate with the command in the table above)
-   - `DASHBOARD_PASSWORD_HASH` (generate with the command in the table above)
-   - `HASH_PEPPER` (any random string)
-7. (Optional) Configure a **Domain** with HTTPS; Dockploy's Traefik will terminate TLS and forward to the container.
-8. Deploy. Visit `https://your.host/v1/health` to verify.
-
-A complete `docker-compose.yml` is included in the repo — you can use it as-is locally.
+5. Add the env vars from [Environment variables](#environment-variables). Minimum: `MINIMAX_API_KEY`.
+6. (Optional) Configure a **Domain** with HTTPS; Traefik will terminate TLS.
+7. Deploy. Visit `https://your.host/health` to verify.
 
 ---
 
@@ -341,20 +303,17 @@ A complete `docker-compose.yml` is included in the repo — you can use it as-is
 inteliocr/
 ├── src/
 │   ├── config/        # env loading + validation
-│   ├── db/            # better-sqlite3 client + migrations
-│   ├── middleware/    # security, rate limit, auth, upload, usage log
-│   ├── services/      # image/pdf/minimax/key/usage services
-│   ├── controllers/   # request handlers
-│   ├── routes/        # api + dashboard routers
-│   ├── utils/         # response envelope, logger, hashing, flash
-│   ├── views/         # EJS templates for the dashboard
-│   ├── public/        # CSS, dashboard.js, Chart.js (local copy)
+│   ├── controllers/   # ocrController (MiniMax), basicController (tesseract)
+│   ├── middleware/    # security, rate limiter, upload validation
+│   ├── routes/        # api router (POST /ocr, POST /basic, GET /health)
+│   ├── services/      # image, pdf, minimax
+│   ├── utils/         # response envelope, logger, async handler
 │   ├── app.js         # buildApp()
-│   └── server.js      # listen + graceful shutdown
+│   └── server.js      # listen + shutdown
+├── examples/          # browser demo + JS client + Node CLI
 ├── tests/             # jest + supertest + nock
 ├── Dockerfile
 ├── docker-compose.yml
-├── package.json
 └── README.md
 ```
 
@@ -381,12 +340,13 @@ npm test
 
 The suite covers:
 
-- API key authentication & quota enforcement
+- Health check and service info
 - File-type validation (size, MIME, magic bytes)
-- Rate limiting (per IP and per key)
+- Rate limiting (per IP)
+- UA filter (bot blocking)
 - MiniMax provider mocking (success, error, timeout)
 - PDF handling
-- Dashboard login/logout/key management
+- CORS
 
 No real MiniMax API calls are made during tests — outbound HTTP is mocked with `nock`.
 
@@ -394,14 +354,11 @@ No real MiniMax API calls are made during tests — outbound HTTP is mocked with
 
 ## Troubleshooting
 
-**`/v1/health` returns 200 but `/v1/ocr` fails with `OCR_PROVIDER_ERROR`.**
+**`/health` returns 200 but `/ocr` fails with `OCR_PROVIDER_ERROR`.**
 → Check `MINIMAX_API_KEY` is valid and that the container has internet access to `api.minimaxi.chat`.
 
-**Dashboard login fails with "Invalid credentials".**
-→ The hash in `DASHBOARD_PASSWORD_HASH` doesn't match the password. Re-generate:
-```bash
-node -e "console.log(require('bcrypt').hashSync('the-password', 12))"
-```
+**`/example/` returns 404.**
+→ Make sure the `examples/` folder is included in your Docker build (it is, by default). If you customized the Dockerfile, copy `examples/` next to `src/`.
 
 **Rate-limited too aggressively from your own IP.**
 → Raise `RATE_LIMIT_IP_PER_MIN` (default 30/min).
@@ -410,7 +367,7 @@ node -e "console.log(require('bcrypt').hashSync('the-password', 12))"
 → The Dockerfile installs `vips-dev` and other build deps in the deps stage and only runtime libs in the final image. If you customize the Dockerfile, keep these system packages.
 
 **Container won't start with "Invalid configuration".**
-→ The app refuses to boot in production if `DASHBOARD_PASSWORD_HASH`, `JWT_SECRET`, `MINIMAX_API_KEY`, or `HASH_PEPPER` are missing/weak. Set them.
+→ The app refuses to boot in production if `MINIMAX_API_KEY` is missing. Set it.
 
 **PDF parsing returns only one page.**
 → The current implementation renders pages sequentially with a 20-page safety cap. For longer receipts/invoices, raise the cap in `src/services/pdfService.js`.

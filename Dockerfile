@@ -40,21 +40,17 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package*.json ./
 COPY src ./src
+COPY examples ./examples
 
-# Data directory for SQLite (mount as volume in Dockploy)
-RUN mkdir -p /data && chown -R node:node /data /app
 USER node
 
 ENV NODE_ENV=production \
-    PORT=3000 \
-    DATA_DIR=/data
+    PORT=3000
 
 EXPOSE 3000
 
-VOLUME ["/data"]
-
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:3000/v1/health || exit 1
+  CMD wget -qO- http://127.0.0.1:3000/health || exit 1
 
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "src/server.js"]

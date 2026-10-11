@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>inteliOCR — browser example</title>
+  <title>inteliOCR — browser demo</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <style>
     :root { color-scheme: dark; }
@@ -34,17 +34,13 @@
 <body>
   <div class="wrap">
     <h1>inteliOCR <span class="badge">browser demo</span></h1>
-    <div class="sub">Pick a receipt or invoice image/PDF, send it to the API.</div>
+    <div class="sub">Pick a receipt or invoice image/PDF, send it to the API. No API key required.</div>
 
     <div class="panel">
-      <label>API key <span class="sub" style="font-weight:400;margin:0">(optional — only if you want per-key quota tracking)</span>
-        <input type="text" id="apiKey" placeholder="ioc_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
-      </label>
       <label>Engine
         <select id="engine">
-          <option value="ia">ia · MiniMax Vision (structured)</option>
+          <option value="ocr">ocr · MiniMax Vision (structured)</option>
           <option value="basic">basic · tesseract.js (raw text)</option>
-          <option value="v1">v1 · /v1/ocr alias</option>
         </select>
       </label>
       <label>Document type

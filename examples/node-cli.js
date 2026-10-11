@@ -4,19 +4,14 @@
 /**
  * Example: process a receipt from the command line.
  *
- *   # Without an API key (anonymous usage, only per-IP rate limit applies):
- *   node examples/node-cli.js ./receipt.jpg
- *
- *   # With an API key (per-key quota + rate limit; usage tracked on dashboard):
- *   INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./receipt.jpg
- *   INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./invoice.pdf --type=invoice
- *   INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./receipt.jpg --engine=basic
- *   INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./invoice.pdf --engine=basic --lang=eng --pages=1,2
+ *   node examples/node-cli.js ./receipt.jpg                       # default: MiniMax Vision
+ *   node examples/node-cli.js ./invoice.pdf --type=invoice
+ *   node examples/node-cli.js ./factura.jpg --engine=basic --lang=spa
+ *   node examples/node-cli.js ./invoice.pdf --engine=basic --lang=eng --pages=1,2
  *
  * Engines:
- *   - 'ia'    (default) → POST /api/ia    — MiniMax Vision
- *   - 'basic'            → POST /api/basic — tesseract.js (raw text)
- *   - 'v1'               → POST /v1/ocr    — alias of 'ia'
+ *   - 'ocr'    (default) → POST /ocr    — MiniMax Vision
+ *   - 'basic'             → POST /basic — tesseract.js (raw text)
  *
  * Exit code: 0 on success, 1 on error.
  */
@@ -27,7 +22,7 @@ const { InteliOCR } = require('./javascript-usage');
 
 function parseArgs(argv) {
   const out = {
-    engine: process.env.INTELIOCR_ENGINE || 'ia',
+    engine: process.env.INTELIOCR_ENGINE || 'ocr',
     type: 'receipt',
     lang: process.env.BASIC_OCR_LANG || 'eng',
     pages: null,
@@ -94,15 +89,13 @@ function printBasic(data, meta) {
 (async () => {
   const { file, engine, type, lang, pages, endpoint, help } = parseArgs(process.argv);
   if (help) {
-    console.log('Usage: node examples/node-cli.js <file> [--engine=ia|basic|v1] [--type=receipt|invoice] [--lang=eng] [--pages=1,2] [--endpoint=http://localhost:3000]');
-    console.log('Optional: INTELIOCR_API_KEY=<key> to track usage per key.');
+    console.log('Usage: node examples/node-cli.js <file> [--engine=ocr|basic] [--type=receipt|invoice] [--lang=eng|spa] [--pages=1,2] [--endpoint=http://localhost:3000]');
     process.exit(0);
   }
   if (!file) {
-    console.error('Usage: node examples/node-cli.js <file> [--engine=ia|basic|v1] [--type=receipt|invoice] [--lang=eng] [--pages=1,2] [--endpoint=http://localhost:3000]');
+    console.error('Usage: node examples/node-cli.js <file> [--engine=ocr|basic] [--type=receipt|invoice] [--lang=eng|spa] [--pages=1,2] [--endpoint=http://localhost:3000]');
     process.exit(2);
   }
-  const apiKey = process.env.INTELIOCR_API_KEY || null;
 
   let buf;
   try {
@@ -111,7 +104,7 @@ function printBasic(data, meta) {
     console.error(`Could not read file "${file}": ${e.message}`);
     process.exit(2);
   }
-  const client = new InteliOCR({ apiKey, endpoint });
+  const client = new InteliOCR({ endpoint });
 
   const t0 = Date.now();
   try {
