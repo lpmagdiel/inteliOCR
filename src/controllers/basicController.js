@@ -7,7 +7,14 @@ const { pdfToImages } = require('../services/pdfService');
 const { touchLastUsed } = require('../services/keyService');
 const { ok, fail } = require('../utils/response');
 
-const DEFAULT_LANG = process.env.BASIC_OCR_LANG || 'eng';
+const SUPPORTED_LANGS = [
+  { code: 'eng', label: 'English' },
+  { code: 'spa', label: 'Español' },
+];
+const SUPPORTED_LANG_CODES = new Set(SUPPORTED_LANGS.map((l) => l.code));
+const DEFAULT_LANG = SUPPORTED_LANG_CODES.has(process.env.BASIC_OCR_LANG)
+  ? process.env.BASIC_OCR_LANG
+  : 'eng';
 
 function shapePage(result, pageNumber) {
   const data = result && result.data ? result.data : {};
@@ -25,7 +32,8 @@ function shapePage(result, pageNumber) {
 async function runBasic(req, res) {
   const start = Date.now();
   const { buffer, kind } = { buffer: req.file.buffer, kind: req.fileMeta.kind };
-  const lang = (req.body?.lang || DEFAULT_LANG).toString();
+  const requestedLang = (req.body?.lang || DEFAULT_LANG).toString().trim();
+  const lang = SUPPORTED_LANG_CODES.has(requestedLang) ? requestedLang : DEFAULT_LANG;
   const pagesInput = (req.body?.pages || '').toString().trim();
 
   let pages;
@@ -61,7 +69,7 @@ async function runBasic(req, res) {
     }
   }
 
-  touchLastUsed(req.apiKey.id);
+  if (req.apiKey) touchLastUsed(req.apiKey.id);
   return ok(
     res,
     {
@@ -82,4 +90,4 @@ async function runBasic(req, res) {
   );
 }
 
-module.exports = { runBasic: asyncHandler(runBasic) };
+module.exports = { runBasic: asyncHandler(runBasic), SUPPORTED_LANGS };

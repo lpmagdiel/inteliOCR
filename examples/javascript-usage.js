@@ -9,7 +9,8 @@
  *
  * Usage:
  *   const { InteliOCR } = require('./javascript-usage');
- *   const client = new InteliOCR({ apiKey: 'ioc_xxxx_yyyy' });
+ *   const client = new InteliOCR();                       // anonymous usage
+ *   const client = new InteliOCR({ apiKey: 'ioc_xxxx_yyyy' }); // counted per key
  *   const { data, meta } = await client.ocr(fileBlob, { type: 'receipt' });
  *
  * Engines:
@@ -22,7 +23,10 @@
  *   import { InteliOCR } from './javascript-usage.js';
  */
 
-const DEFAULT_ENDPOINT = 'https://inteliapi-inteliocr-api-f1bso8-15ce77-186-240-153-209.sslip.io';
+const DEFAULT_ENDPOINT_NODE = 'https://inteliapi-inteliocr-api-f1bso8-15ce77-186-240-153-209.sslip.io';
+const DEFAULT_ENDPOINT = (typeof window !== 'undefined' && window.location && window.location.origin)
+  ? window.location.origin
+  : DEFAULT_ENDPOINT_NODE;
 
 const ENGINE_PATHS = {
   v1: '/v1/ocr',
@@ -32,13 +36,17 @@ const ENGINE_PATHS = {
 
 class InteliOCR {
   /**
-   * @param {Object} opts
-   * @param {string} opts.apiKey    - API key in the form `ioc_<prefix>_<secret>`
-   * @param {string} [opts.endpoint] - Base URL. Defaults to the public instance.
+   * @param {Object} [opts]
+   * @param {string} [opts.apiKey]    - Optional. API key in the form `ioc_<prefix>_<secret>`.
+   *                                    If provided, usage is counted per-key and the
+   *                                    monthly quota is enforced server-side.
+   * @param {string} [opts.endpoint] - Base URL. In the browser, defaults to
+   *                                    `window.location.origin` (same origin as the
+   *                                    page, so CSP `connect-src 'self'` is honored).
+   *                                    In Node, defaults to the deployed public instance.
    * @param {number} [opts.timeoutMs] - Request timeout in ms (default 60000).
    */
-  constructor({ apiKey, endpoint = DEFAULT_ENDPOINT, timeoutMs = 60_000 } = {}) {
-    if (!apiKey) throw new Error('InteliOCR: apiKey is required');
+  constructor({ apiKey = null, endpoint = DEFAULT_ENDPOINT, timeoutMs = 60_000 } = {}) {
     this.apiKey = apiKey;
     this.endpoint = endpoint.replace(/\/+$/, '');
     this.timeoutMs = timeoutMs;
@@ -108,12 +116,11 @@ class InteliOCR {
 
     let res;
     try {
+      const headers = { ...(body ? {} : { Accept: 'application/json' }) };
+      if (this.apiKey) headers['X-API-Key'] = this.apiKey;
       res = await fetch(`${this.endpoint}${path}`, {
         method,
-        headers: {
-          'X-API-Key': this.apiKey,
-          ...(body ? {} : { Accept: 'application/json' }),
-        },
+        headers,
         body,
         signal: ctrl.signal,
       });

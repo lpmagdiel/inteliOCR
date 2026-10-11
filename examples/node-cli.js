@@ -4,6 +4,10 @@
 /**
  * Example: process a receipt from the command line.
  *
+ *   # Without an API key (anonymous usage, only per-IP rate limit applies):
+ *   node examples/node-cli.js ./receipt.jpg
+ *
+ *   # With an API key (per-key quota + rate limit; usage tracked on dashboard):
  *   INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./receipt.jpg
  *   INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./invoice.pdf --type=invoice
  *   INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./receipt.jpg --engine=basic
@@ -90,18 +94,15 @@ function printBasic(data, meta) {
 (async () => {
   const { file, engine, type, lang, pages, endpoint, help } = parseArgs(process.argv);
   if (help) {
-    console.log('Usage: INTELIOCR_API_KEY=<key> node examples/node-cli.js <file> [--engine=ia|basic|v1] [--type=receipt|invoice] [--lang=eng] [--pages=1,2] [--endpoint=http://localhost:3000]');
+    console.log('Usage: node examples/node-cli.js <file> [--engine=ia|basic|v1] [--type=receipt|invoice] [--lang=eng] [--pages=1,2] [--endpoint=http://localhost:3000]');
+    console.log('Optional: INTELIOCR_API_KEY=<key> to track usage per key.');
     process.exit(0);
   }
   if (!file) {
-    console.error('Usage: INTELIOCR_API_KEY=<key> node examples/node-cli.js <file> [--engine=ia|basic|v1] [--type=receipt|invoice] [--lang=eng] [--pages=1,2] [--endpoint=http://localhost:3000]');
+    console.error('Usage: node examples/node-cli.js <file> [--engine=ia|basic|v1] [--type=receipt|invoice] [--lang=eng] [--pages=1,2] [--endpoint=http://localhost:3000]');
     process.exit(2);
   }
-  const apiKey = process.env.INTELIOCR_API_KEY;
-  if (!apiKey) {
-    console.error('Set INTELIOCR_API_KEY in your environment.');
-    process.exit(2);
-  }
+  const apiKey = process.env.INTELIOCR_API_KEY || null;
 
   let buf;
   try {

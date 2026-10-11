@@ -32,7 +32,7 @@ async function runOcr(req, res) {
     return fail(res, e.status || 500, e.code || 'OCR_PROVIDER_ERROR', e.message, e.details || {});
   }
 
-  touchLastUsed(req.apiKey.id);
+  if (req.apiKey) touchLastUsed(req.apiKey.id);
   return ok(res, result.data, {
     latency_ms: Date.now() - start,
     model: result.meta.model,

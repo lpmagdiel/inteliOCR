@@ -6,9 +6,11 @@ const { fail } = require('../utils/response');
 
 async function apiKeyAuth(req, res, next) {
   const headerKey = req.get('x-api-key');
+
   if (!headerKey) {
-    return fail(res, 401, 'MISSING_API_KEY', 'X-API-Key header is required.');
+    return next();
   }
+
   if (typeof headerKey !== 'string' || headerKey.length < 16) {
     return fail(res, 401, 'INVALID_API_KEY', 'Invalid API key.');
   }

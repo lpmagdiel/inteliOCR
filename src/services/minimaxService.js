@@ -123,10 +123,20 @@ async function callMinimaxVision(pages, type) {
       });
     }
     logger.error({ err: err.message, status: err.response && err.response.status }, 'MiniMax call failed');
+    const upstreamStatus = err.response && err.response.status;
+    const upstreamData = err.response && err.response.data;
+    const upstreamMessage =
+      (upstreamData && (upstreamData.error && (upstreamData.error.message || upstreamData.error) || upstreamData.message)) ||
+      err.message ||
+      'Unknown upstream error';
     throw Object.assign(new Error('OCR provider error'), {
       status: 502,
       code: 'OCR_PROVIDER_ERROR',
-      details: { provider: 'minimax', upstream_status: err.response && err.response.status },
+      details: {
+        provider: 'minimax',
+        upstream_status: upstreamStatus,
+        upstream_message: upstreamMessage,
+      },
     });
   }
 }

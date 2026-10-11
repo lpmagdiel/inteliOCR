@@ -130,11 +130,16 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 
 Process a receipt or invoice image/PDF and return structured JSON.
 
+> The `X-API-Key` header is **optional**. The upstream MiniMax API key is
+> read from `.env` (`MINIMAX_API_KEY`) and used server-side. If you send a
+> valid key, requests are counted per-key and the monthly quota is enforced.
+> Without a key, requests are allowed and only the per-IP rate limit applies.
+
 **Request**
 
 ```
 POST /v1/ocr
-Headers:
+Headers:                          # all optional
   X-API-Key: ioc_<prefix>_<secret>
   Content-Type: multipart/form-data
 Body (multipart fields):
@@ -146,7 +151,6 @@ Body (multipart fields):
 
 ```bash
 curl -X POST http://localhost:3000/v1/ocr \
-  -H "X-API-Key: ioc_a1b2c3d4_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
   -F "file=@./receipt.jpg" \
   -F "type=receipt"
 ```
@@ -160,7 +164,6 @@ fd.append('type', 'receipt');
 
 const res = await fetch('https://your.host/v1/ocr', {
   method: 'POST',
-  headers: { 'X-API-Key': 'ioc_...' },
   body: fd,
 });
 const json = await res.json();
@@ -174,7 +177,6 @@ import requests
 with open('receipt.jpg', 'rb') as f:
     r = requests.post(
         'https://your.host/v1/ocr',
-        headers={'X-API-Key': 'ioc_...'},
         files={'file': ('receipt.jpg', f, 'image/jpeg')},
         data={'type': 'receipt'},
         timeout=60,
@@ -265,8 +267,7 @@ All responses use a single envelope:
 |---|---|---|
 | 400 | `MISSING_FILE` | `file` field missing in multipart body |
 | 400 | `INVALID_FILE` | File could not be preprocessed |
-| 401 | `MISSING_API_KEY` | `X-API-Key` header not present |
-| 401 | `INVALID_API_KEY` | Key is unknown or revoked |
+| 401 | `INVALID_API_KEY` | An `X-API-Key` header was provided but the key is unknown or revoked |
 | 403 | `BLOCKED_UA` | User-Agent is empty or matches the blocklist |
 | 413 | `FILE_TOO_LARGE` | Upload exceeds the per-format limit |
 | 415 | `UNSUPPORTED_FORMAT` | Not one of JPG / PNG / WebP / PDF |

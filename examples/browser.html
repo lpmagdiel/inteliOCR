@@ -37,7 +37,7 @@
     <div class="sub">Pick a receipt or invoice image/PDF, send it to the API.</div>
 
     <div class="panel">
-      <label>API key
+      <label>API key <span class="sub" style="font-weight:400;margin:0">(optional — only if you want per-key quota tracking)</span>
         <input type="text" id="apiKey" placeholder="ioc_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
       </label>
       <label>Engine
@@ -54,7 +54,10 @@
         </select>
       </label>
       <label id="langField">Tesseract language (basic)
-        <input type="text" id="lang" placeholder="eng" value="eng" autocomplete="off" />
+        <select id="lang">
+          <option value="eng" selected>English</option>
+          <option value="spa">Español</option>
+        </select>
       </label>
       <label>File
         <input type="file" id="file" accept="image/jpeg,image/png,image/webp,application/pdf" />

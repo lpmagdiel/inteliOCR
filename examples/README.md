@@ -2,6 +2,11 @@
 
 Three ways to call the API from JavaScript.
 
+> The `X-API-Key` header is **optional**. The upstream MiniMax API key is
+> configured server-side in `.env` (`MINIMAX_API_KEY`). Sending an API key
+> enables per-key quota tracking and per-key rate limiting; without one
+> only the per-IP rate limit applies.
+
 ## 1. Reusable client — `javascript-usage.js`
 
 A 100-line wrapper around `fetch` that handles auth, timeouts, AbortSignal, and uniform error mapping. Works in **Node 18+** and **modern browsers**.
@@ -9,7 +14,8 @@ A 100-line wrapper around `fetch` that handles auth, timeouts, AbortSignal, and 
 ```js
 // Node
 const { InteliOCR } = require('./javascript-usage');
-const client = new InteliOCR({ apiKey: process.env.INTELIOCR_API_KEY });
+const client = new InteliOCR();                                    // anonymous
+const client = new InteliOCR({ apiKey: process.env.INTELIOCR_API_KEY }); // per-key
 
 // Structured extraction via MiniMax Vision
 const { data, meta } = await client.ia(fileBuffer, { type: 'receipt' });
@@ -24,7 +30,7 @@ console.log(txt.text);
 <!-- Browser -->
 <script src="./javascript-usage.js"></script>
 <script>
-  const client = new InteliOCR({ apiKey: 'ioc_…' });
+  const client = new InteliOCR();                       // anonymous
   const { data, meta } = await client.ia(fileInput.files[0]);
 </script>
 ```
@@ -71,10 +77,10 @@ Errors are thrown as `Error` with extra fields:
 ## 2. CLI script — `node-cli.js`
 
 ```bash
-INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./receipt.jpg                       # default: --engine=ia
-INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./invoice.pdf --type=invoice        # ia + invoice hint
-INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./receipt.jpg --engine=basic        # tesseract raw text
-INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./invoice.pdf --engine=basic --lang=eng --pages=1,2
+node examples/node-cli.js ./receipt.jpg                                              # anonymous
+INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./invoice.pdf --type=invoice # per-key
+node examples/node-cli.js ./receipt.jpg --engine=basic                               # tesseract raw text
+node examples/node-cli.js ./invoice.pdf --engine=basic --lang=eng --pages=1,2
 ```
 
 The CLI targets `http://localhost:3000` by default, or reads `INTELIOCR_API_URL`. Override it with `--endpoint=…`. The default engine is `ia` (override with `INTELIOCR_ENGINE` or `--engine=`). Exit code is non-zero on error. Run `node examples/node-cli.js --help` to see the full usage.
@@ -88,45 +94,42 @@ The CLI targets `http://localhost:3000` by default, or reads `INTELIOCR_API_URL`
   curl http://localhost:3000/v1/health
   ```
 
-3. Create an API key in the dashboard, then send a supported image or PDF:
+3. Send a supported image or PDF (no API key needed):
 
   ```bash
   # MiniMax Vision (structured)
-  INTELIOCR_API_KEY=ioc_<prefix>_<secret> \
-    node examples/node-cli.js ./receipt.jpg --type=receipt
+  node examples/node-cli.js ./receipt.jpg --type=receipt
 
   # tesseract.js (raw text, offline)
-  INTELIOCR_API_KEY=ioc_<prefix>_<secret> \
-    node examples/node-cli.js ./receipt.jpg --engine=basic
+  node examples/node-cli.js ./receipt.jpg --engine=basic
   ```
 
 For a deployed API, set `INTELIOCR_API_URL` or pass `--endpoint`:
 
 ```bash
-INTELIOCR_API_KEY=ioc_<prefix>_<secret> \
-  node examples/node-cli.js ./invoice.pdf --type=invoice --endpoint=https://your-host.example.com
+node examples/node-cli.js ./invoice.pdf --type=invoice --endpoint=https://your-host.example.com
 ```
 
 ## 3. Browser demo — `browser.html`
 
-Open `http://localhost:3000/example/` after starting the server (the `examples/` folder is mounted there). It renders a tiny dark UI where you paste your API key, pick the engine (`ia`, `basic`, `v1`), pick a file, and see the JSON result. You can also open `examples/browser.html` directly (`file://`) — the script paths are relative. **Do not ship this file to production**: it embeds the key client-side.
+Open `http://localhost:3000/example/` after starting the server (the `examples/` folder is mounted there). It renders a tiny dark UI where you pick the engine (`ia`, `basic`, `v1`), pick a file, and see the JSON result. The API key field is optional: leave it blank for anonymous usage, or paste a key from the dashboard to track usage under that key. You can also open `examples/browser.html` directly (`file://`) — the script paths are relative. If you do paste a key client-side, **do not ship this file to production**.
 
 ## Configuration
 
 The `InteliOCR` constructor and the CLI read from the same env vars:
 
 ```bash
-export INTELIOCR_API_KEY=ioc_<8 hex chars>_<48 hex chars>
-export INTELIOCR_API_URL=https://your-host.example.com   # optional, defaults to localhost:3000
-export INTELIOCR_ENGINE=ia                                # optional, default engine
-export BASIC_OCR_LANG=eng                                 # optional, default Tesseract language
+export INTELIOCR_API_KEY=ioc_<8 hex chars>_<48 hex chars>  # optional
+export INTELIOCR_API_URL=https://your-host.example.com    # optional, defaults to localhost:3000
+export INTELIOCR_ENGINE=ia                                 # optional, default engine
+export BASIC_OCR_LANG=eng                                  # optional, default Tesseract language
 ```
 
 You can also pass `endpoint` to point to a self-hosted instance:
 
 ```js
 new InteliOCR({
-  apiKey: 'ioc_…',
+  apiKey: 'ioc_…',                                    // optional
   endpoint: 'https://your-host.example.com',
 });
 ```
@@ -143,4 +146,4 @@ await client.ia(file, { signal: ctrl.signal });
 
 ## Security note
 
-The API key gives full access to your quota and (by extension) billing. **Never embed it in client-side code that ships to users.** Run the client from your backend, or proxy requests through your own server.
+The API key (when used) is associated with your dashboard usage and quota. If you do use a key, **never embed it in client-side code that ships to users.** Run the client from your backend, or proxy requests through your own server. Anonymous usage (no key) is allowed; in that case only the per-IP rate limit applies.

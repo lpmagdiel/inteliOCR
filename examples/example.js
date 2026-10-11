@@ -14,16 +14,16 @@
   }
 
   function refresh() {
-    runBtn.disabled = !($('apiKey').value.trim() && $('file').files[0]);
+    runBtn.disabled = !$('file').files[0];
   }
   $('apiKey').addEventListener('input', refresh);
   $('file').addEventListener('change', refresh);
   engineSel.addEventListener('change', syncLangVisibility);
   syncLangVisibility();
 
-  runBtn.addEventListener('click', async () => {
+runBtn.addEventListener('click', async () => {
     const file = $('file').files[0];
-    const apiKey = $('apiKey').value.trim();
+    const apiKey = $('apiKey').value.trim() || null;
     const engine = engineSel.value;
     const type = typeSel.value;
     const lang = langInput.value.trim() || 'eng';

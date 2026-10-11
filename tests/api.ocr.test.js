@@ -72,14 +72,28 @@ describe('POST /v1/ocr', () => {
     expect(res.body.error.code).toBe('MISSING_FILE');
   });
 
-  test('rejects missing API key', async () => {
+  test('allows requests without API key (key is optional)', async () => {
+    nock('https://minimax.test')
+      .post('/chat/completions')
+      .reply(200, {
+        model: 'MiniMax-VL',
+        choices: [
+          {
+            finish_reason: 'stop',
+            message: {
+              content: JSON.stringify({ document_type: 'receipt', merchant: 'NO-KEY MART', total: 1 }),
+            },
+          },
+        ],
+      });
+
     const buf = await makeJpegBuffer();
     const res = await request(app)
       .post('/v1/ocr')
       .set('User-Agent', 'jest')
       .attach('file', buf, { filename: 'r.jpg', contentType: 'image/jpeg' });
-    expect(res.status).toBe(401);
-    expect(res.body.error.code).toBe('MISSING_API_KEY');
+    expect(res.status).toBe(200);
+    expect(res.body.data.merchant).toBe('NO-KEY MART');
   });
 
   test('rejects invalid API key', async () => {
