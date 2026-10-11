@@ -77,12 +77,11 @@ function buildApp() {
   app.use('/v1', apiRouter);
   app.use('/dashboard', dashboardRouter);
 
-  app.get('/example', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'examples', 'browser.html'));
-  });
-  app.get('/example/javascript-usage.js', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'examples', 'javascript-usage.js'));
-  });
+  app.get('/example', (req, res) => res.redirect(301, '/example/'));
+  app.use(
+    '/example/',
+    express.static(path.join(__dirname, '..', 'examples'), { index: 'browser.html' })
+  );
 
   app.get('/', (req, res) => {
     res.json({
