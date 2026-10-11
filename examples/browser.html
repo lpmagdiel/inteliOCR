@@ -40,11 +40,21 @@
       <label>API key
         <input type="text" id="apiKey" placeholder="ioc_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
       </label>
+      <label>Engine
+        <select id="engine">
+          <option value="ia">ia · MiniMax Vision (structured)</option>
+          <option value="basic">basic · tesseract.js (raw text)</option>
+          <option value="v1">v1 · /v1/ocr alias</option>
+        </select>
+      </label>
       <label>Document type
         <select id="type">
           <option value="receipt">receipt</option>
           <option value="invoice">invoice</option>
         </select>
+      </label>
+      <label id="langField">Tesseract language (basic)
+        <input type="text" id="lang" placeholder="eng" value="eng" autocomplete="off" />
       </label>
       <label>File
         <input type="file" id="file" accept="image/jpeg,image/png,image/webp,application/pdf" />

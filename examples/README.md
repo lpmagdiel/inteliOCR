@@ -10,8 +10,14 @@ A 100-line wrapper around `fetch` that handles auth, timeouts, AbortSignal, and 
 // Node
 const { InteliOCR } = require('./javascript-usage');
 const client = new InteliOCR({ apiKey: process.env.INTELIOCR_API_KEY });
-const { data, meta } = await client.ocr(fileBuffer, { type: 'receipt' });
+
+// Structured extraction via MiniMax Vision
+const { data, meta } = await client.ia(fileBuffer, { type: 'receipt' });
 console.log(data.merchant, data.total, data.currency);
+
+// Raw text via tesseract.js (offline)
+const { data: txt } = await client.basic(fileBuffer, { lang: 'eng' });
+console.log(txt.text);
 ```
 
 ```html
@@ -19,16 +25,36 @@ console.log(data.merchant, data.total, data.currency);
 <script src="./javascript-usage.js"></script>
 <script>
   const client = new InteliOCR({ apiKey: 'ioc_…' });
-  const { data, meta } = await client.ocr(fileInput.files[0]);
+  const { data, meta } = await client.ia(fileInput.files[0]);
 </script>
 ```
 
 Methods:
 
-| Method | Description |
-|---|---|
-| `ocr(file, { type, signal })` | POST `/v1/ocr`. Returns `{ data, meta }`. |
-| `health()` | GET `/v1/health`. Returns `{ data: { status, uptime, timestamp } }`. |
+| Method | Endpoint | Description |
+|---|---|---|
+| `ocr(file, opts)` | — | Convenience alias of `run('v1', file, opts)`. |
+| `run(engine, file, opts)` | varies | Generic dispatcher (see Engines). |
+| `ia(file, opts)` | `POST /api/ia` | MiniMax Vision (structured JSON). |
+| `basic(file, opts)` | `POST /api/basic` | tesseract.js (raw text, per-page confidence). |
+| `health()` | `GET /v1/health` | Liveness probe. |
+
+Engines for `run()` / `client.<method>()`:
+
+| Engine | Path | Notes |
+|---|---|---|
+| `'ia'` | `/api/ia` | MiniMax Vision. Returns structured receipt/invoice JSON. |
+| `'basic'` | `/api/basic` | tesseract.js. Returns `{ engine, language, pages, text, results:[{page,text,confidence,lines,words}] }`. |
+| `'v1'` | `/v1/ocr` | Legacy alias of `'ia'`. |
+
+Common options:
+
+| Opt | Engines | Description |
+|---|---|---|
+| `type: 'receipt'\|'invoice'` | `ia`, `v1` | Hint for the extractor. |
+| `lang: string` | `basic` | Tesseract language code (default `'eng'`). |
+| `pages: number[]` | `basic` | 1-indexed pages to process (PDF only). |
+| `signal: AbortSignal` | all | Forwards to `fetch()` for cancellation. |
 
 Errors are thrown as `Error` with extra fields:
 
@@ -45,11 +71,13 @@ Errors are thrown as `Error` with extra fields:
 ## 2. CLI script — `node-cli.js`
 
 ```bash
-INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./receipt.jpg
-INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./invoice.pdf --type=invoice
+INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./receipt.jpg                       # default: --engine=ia
+INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./invoice.pdf --type=invoice        # ia + invoice hint
+INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./receipt.jpg --engine=basic        # tesseract raw text
+INTELIOCR_API_KEY=ioc_xxx_yyy node examples/node-cli.js ./invoice.pdf --engine=basic --lang=eng --pages=1,2
 ```
 
-The CLI targets `http://localhost:3000` by default, or reads `INTELIOCR_API_URL`. Override it with `--endpoint=https://your-host.example.com`. It prints merchant, totals, items, and latency, and exits non-zero on error. Run `node examples/node-cli.js --help` to see the usage.
+The CLI targets `http://localhost:3000` by default, or reads `INTELIOCR_API_URL`. Override it with `--endpoint=…`. The default engine is `ia` (override with `INTELIOCR_ENGINE` or `--engine=`). Exit code is non-zero on error. Run `node examples/node-cli.js --help` to see the full usage.
 
 ### Quick local API test
 
@@ -63,7 +91,13 @@ The CLI targets `http://localhost:3000` by default, or reads `INTELIOCR_API_URL`
 3. Create an API key in the dashboard, then send a supported image or PDF:
 
   ```bash
-  INTELIOCR_API_KEY=ioc_<prefix>_<secret> node examples/node-cli.js ./receipt.jpg --type=receipt
+  # MiniMax Vision (structured)
+  INTELIOCR_API_KEY=ioc_<prefix>_<secret> \
+    node examples/node-cli.js ./receipt.jpg --type=receipt
+
+  # tesseract.js (raw text, offline)
+  INTELIOCR_API_KEY=ioc_<prefix>_<secret> \
+    node examples/node-cli.js ./receipt.jpg --engine=basic
   ```
 
 For a deployed API, set `INTELIOCR_API_URL` or pass `--endpoint`:
@@ -75,14 +109,17 @@ INTELIOCR_API_KEY=ioc_<prefix>_<secret> \
 
 ## 3. Browser demo — `browser.html`
 
-Open `examples/browser.html` in a browser (after serving the directory — file:// works too for testing). It renders a tiny dark UI where you paste your API key, pick a file, and see the JSON result. **Do not ship this file to production**: it embeds the key client-side.
+Open `http://localhost:3000/example/` after starting the server (the `examples/` folder is mounted there). It renders a tiny dark UI where you paste your API key, pick the engine (`ia`, `basic`, `v1`), pick a file, and see the JSON result. You can also open `examples/browser.html` directly (`file://`) — the script paths are relative. **Do not ship this file to production**: it embeds the key client-side.
 
 ## Configuration
 
-Both `InteliOCR` constructor and the CLI read from the same env var:
+The `InteliOCR` constructor and the CLI read from the same env vars:
 
 ```bash
 export INTELIOCR_API_KEY=ioc_<8 hex chars>_<48 hex chars>
+export INTELIOCR_API_URL=https://your-host.example.com   # optional, defaults to localhost:3000
+export INTELIOCR_ENGINE=ia                                # optional, default engine
+export BASIC_OCR_LANG=eng                                 # optional, default Tesseract language
 ```
 
 You can also pass `endpoint` to point to a self-hosted instance:
@@ -96,12 +133,12 @@ new InteliOCR({
 
 ## Cancellation
 
-Both `ocr()` and the CLI pass an `AbortSignal` if you provide one — useful for long PDFs:
+All engines accept an `AbortSignal` — useful for long PDFs:
 
 ```js
 const ctrl = new AbortController();
 setTimeout(() => ctrl.abort(), 5_000);
-await client.ocr(file, { signal: ctrl.signal });
+await client.ia(file, { signal: ctrl.signal });
 ```
 
 ## Security note

@@ -4,29 +4,43 @@
   const $ = (id) => document.getElementById(id);
   const runBtn = $('run');
   const statusEl = $('status');
+  const engineSel = $('engine');
+  const typeSel = $('type');
+  const langField = $('langField');
+  const langInput = $('lang');
+
+  function syncLangVisibility() {
+    langField.style.display = engineSel.value === 'basic' ? '' : 'none';
+  }
 
   function refresh() {
     runBtn.disabled = !($('apiKey').value.trim() && $('file').files[0]);
   }
   $('apiKey').addEventListener('input', refresh);
   $('file').addEventListener('change', refresh);
+  engineSel.addEventListener('change', syncLangVisibility);
+  syncLangVisibility();
 
   runBtn.addEventListener('click', async () => {
     const file = $('file').files[0];
     const apiKey = $('apiKey').value.trim();
-    const type = $('type').value;
+    const engine = engineSel.value;
+    const type = typeSel.value;
+    const lang = langInput.value.trim() || 'eng';
     const resultPanel = $('resultPanel');
     const resultEl = $('result');
 
     runBtn.disabled = true;
-    statusEl.textContent = 'Uploading…';
+    statusEl.textContent = engine === 'basic' ? 'Recognizing text (tesseract)…' : 'Uploading…';
     statusEl.className = 'sub';
     resultPanel.style.display = 'none';
 
     const client = new InteliOCR({ apiKey });
+    const opts = engine === 'basic' ? { lang } : { type };
     try {
-      const { data, meta } = await client.ocr(file, { type });
-      statusEl.textContent = `Done in ${meta.latency_ms} ms`;
+      const { data, meta } = await client.run(engine, file, opts);
+      const ms = meta.latency_ms != null ? meta.latency_ms : 0;
+      statusEl.textContent = `Done in ${ms} ms · ${meta.engine || engine}`;
       statusEl.className = 'ok';
       resultEl.textContent = JSON.stringify({ data, meta }, null, 2);
       resultPanel.style.display = 'block';

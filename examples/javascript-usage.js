@@ -12,12 +12,23 @@
  *   const client = new InteliOCR({ apiKey: 'ioc_xxxx_yyyy' });
  *   const { data, meta } = await client.ocr(fileBlob, { type: 'receipt' });
  *
+ * Engines:
+ *   - 'ia'    → POST /api/ia     (MiniMax Vision, structured JSON)
+ *   - 'basic' → POST /api/basic  (tesseract.js, raw text)
+ *   - 'v1'    → POST /v1/ocr     (alias of 'ia', MiniMax Vision)
+ *
  * In the browser, either include this file with a <script> tag (it exposes
  * window.InteliOCR) or import it as ESM:
  *   import { InteliOCR } from './javascript-usage.js';
  */
 
 const DEFAULT_ENDPOINT = 'https://inteliapi-inteliocr-api-f1bso8-15ce77-186-240-153-209.sslip.io';
+
+const ENGINE_PATHS = {
+  v1: '/v1/ocr',
+  ia: '/api/ia',
+  basic: '/api/basic',
+};
 
 class InteliOCR {
   /**
@@ -39,22 +50,50 @@ class InteliOCR {
   }
 
   /**
-   * POST /v1/ocr — process a receipt or invoice.
+   * Run OCR through a given engine.
+   *
+   * @param {'v1'|'ia'|'basic'} engine
    * @param {Blob|File|Buffer} file - JPG, PNG, WebP or PDF (≤ 10 MB images / 15 MB PDF).
    * @param {Object} [opts]
-   * @param {'receipt'|'invoice'} [opts.type] - Optional hint for the extractor.
-   * @param {AbortSignal} [opts.signal] - Forwarded to fetch().
+   * @param {'receipt'|'invoice'} [opts.type] - Hint for the extractor (`ia` engine).
+   * @param {string} [opts.lang]              - Tesseract language code (`basic` engine, default 'eng').
+   * @param {number[]} [opts.pages]           - 1-indexed pages to process (`basic` engine, PDF only).
+   * @param {AbortSignal} [opts.signal]       - Forwarded to fetch().
    * @returns {Promise<{success:true, data:object, meta:object}>}
    */
-  async ocr(file, opts = {}) {
+  async run(engine, file, opts = {}) {
+    const path = ENGINE_PATHS[engine];
+    if (!path) throw new Error(`InteliOCR: unknown engine "${engine}". Use 'v1', 'ia' or 'basic'.`);
+
     const fd = new FormData();
     fd.append('file', this._toBlob(file), this._filename(file));
     if (opts.type) fd.append('type', opts.type);
+    if (engine === 'basic') {
+      if (opts.lang) fd.append('lang', opts.lang);
+      if (Array.isArray(opts.pages) && opts.pages.length) {
+        fd.append('pages', opts.pages.join(','));
+      }
+    }
 
-    return this._request('POST', '/v1/ocr', {
+    return this._request('POST', path, {
       body: fd,
       signal: opts.signal,
     });
+  }
+
+  /** POST /v1/ocr — MiniMax Vision (legacy/default). */
+  ocr(file, opts = {}) {
+    return this.run('v1', file, opts);
+  }
+
+  /** POST /api/ia — MiniMax Vision. */
+  ia(file, opts = {}) {
+    return this.run('ia', file, opts);
+  }
+
+  /** POST /api/basic — tesseract.js (raw text). */
+  basic(file, opts = {}) {
+    return this.run('basic', file, opts);
   }
 
   // ---------- internals ----------

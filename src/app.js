@@ -17,6 +17,7 @@ const { errorHandler, notFound } = require('./utils/errorHandler');
 const logger = require('./utils/logger');
 
 const apiRouter = require('./routes/api');
+const apiAltRouter = require('./routes/apiAlt');
 const dashboardRouter = require('./routes/dashboard');
 
 function buildApp() {
@@ -75,6 +76,7 @@ function buildApp() {
   });
 
   app.use('/v1', apiRouter);
+  app.use('/api', apiAltRouter);
   app.use('/dashboard', dashboardRouter);
 
   app.get('/example', (req, res) => res.redirect(301, '/example/'));
@@ -95,6 +97,8 @@ function buildApp() {
           ocr: 'POST /v1/ocr',
           dashboard: 'GET /dashboard',
           example: 'GET /example',
+          ia: 'POST /api/ia',
+          basic: 'POST /api/basic',
         },
       },
       meta: { request_id: res.locals.requestId, timestamp: new Date().toISOString() },

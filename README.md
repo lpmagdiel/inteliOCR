@@ -98,7 +98,7 @@ All variables live in `.env` (see `.env.example` for the full list). The most im
 | `JWT_EXPIRES_IN` | no | `12h` | Dashboard session lifetime |
 | `MINIMAX_API_KEY` | **yes (prod)** | — | MiniMax API key |
 | `MINIMAX_API_BASE` | no | `https://api.minimaxi.chat/v1` | MiniMax API base URL |
-| `MINIMAX_MODEL` | no | `MiniMax-VL` | Vision model to call |
+| `MINIMAX_MODEL` | no | `MiniMax-M3` | Vision-capable model. Older `MiniMax-VL` was removed. |
 | `MINIMAX_TIMEOUT_MS` | no | `30000` | Upstream request timeout |
 | `MAX_UPLOAD_IMAGE_MB` | no | `10` | Max size for image uploads |
 | `MAX_UPLOAD_PDF_MB` | no | `15` | Max size for PDF uploads |

@@ -45,7 +45,7 @@ const config = {
   minimax: {
     apiKey: optional('MINIMAX_API_KEY', ''),
     apiBase: optional('MINIMAX_API_BASE', 'https://api.minimaxi.chat/v1'),
-    model: optional('MINIMAX_MODEL', 'MiniMax-VL'),
+    model: optional('MINIMAX_MODEL', 'MiniMax-M3'),
     timeoutMs: asInt('MINIMAX_TIMEOUT_MS', 30000),
   },
 
